@@ -205,11 +205,11 @@ export function PublicMenuView({
   function handleProductTap(product: PublicMenuProduct) {
     startTransition(async () => {
       const groups = await fetchPublicProductOptionGroups(product.id);
-      if (groups.length > 0) {
-        setOptionPicker({ product, groups });
-        return;
-      }
-      addToCart(product, [], 1);
+      // Always confirm through the dialog, even for a product with no
+      // option groups — OptionPickerDialog degrades gracefully to a plain
+      // quantity stepper when `groups` is empty, so this is still the one
+      // path for "how many?" instead of silently adding a single unit.
+      setOptionPicker({ product, groups });
     });
   }
 

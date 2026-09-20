@@ -3,6 +3,7 @@ import { Calculator } from "lucide-react";
 import { InvoicePrintButton } from "@/features/invoices/components/invoice-print-button";
 import { InvoicePdfButton } from "@/features/invoices/components/invoice-pdf-button";
 import { InvoicePrintTotals } from "@/features/invoices/components/invoice-print-totals";
+import { InvoiceLangSwitcher } from "@/features/invoices/components/invoice-lang-switcher";
 import { BackButton } from "@/components/shared/back-button";
 import { BrandMark } from "@/components/shared/brand-mark";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ const LABELS: Record<
     itemsCount: string;
     totalWeight: string;
     thankYou: string;
+    walkInCustomer: string;
   }
 > = {
   ar: {
@@ -79,6 +81,7 @@ const LABELS: Record<
     itemsCount: "عدد المنتجات",
     totalWeight: "الوزن الإجمالي (kg)",
     thankYou: "شكراً لتعاملكم معنا",
+    walkInCustomer: "زبون مباشر",
   },
   fr: {
     title: "Facture",
@@ -106,6 +109,7 @@ const LABELS: Record<
     itemsCount: "Nombre de produits",
     totalWeight: "Poids total (kg)",
     thankYou: "Merci pour votre confiance",
+    walkInCustomer: "Client de passage",
   },
   en: {
     title: "Invoice",
@@ -133,6 +137,7 @@ const LABELS: Record<
     itemsCount: "Number of products",
     totalWeight: "Total weight (kg)",
     thankYou: "Thank you for your business",
+    walkInCustomer: "Walk-in",
   },
 };
 
@@ -196,7 +201,7 @@ export async function InvoicePrintView({
       className="mx-auto max-w-2xl space-y-6 p-6 print:max-w-none print:p-0"
     >
       <style>{"@page { size: A5; margin: 5mm; }"}</style>
-      <div className="flex items-center justify-between gap-2 rounded-xl border bg-card px-4 py-3 print:hidden">
+      <div className="flex flex-wrap items-center justify-center gap-3 print:hidden">
         <div className="flex items-center gap-3">
           <BrandMark size="sm" logoUrl={settings.logoUrl} />
           <BackButton fallbackHref={backHref} />
@@ -213,7 +218,9 @@ export async function InvoicePrintView({
             </Button>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="hidden h-6 w-px bg-border sm:block" />
+        <div className="flex items-center gap-2">
+          <InvoiceLangSwitcher lang={lang} />
           <InvoicePdfButton
             targetId="invoice-card"
             fileName={`${invoice.invoiceNumber}.pdf`}
@@ -266,7 +273,7 @@ export async function InvoicePrintView({
                   <p className="text-sm font-semibold text-foreground print:text-xs">
                     {t.billTo}:
                     <span className="font-bold mx-1.5">
-                      {invoice.customerName}
+                      {invoice.customerId ? invoice.customerName : t.walkInCustomer}
                     </span>
                   </p>
 
