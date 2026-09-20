@@ -30,7 +30,9 @@ function RadioDot({ checked }: { checked: boolean }) {
         checked ? "border-primary bg-primary" : "border-input bg-transparent",
       )}
     >
-      {checked && <span className="size-2 rounded-full bg-primary-foreground" />}
+      {checked && (
+        <span className="size-2 rounded-full bg-primary-foreground" />
+      )}
     </span>
   );
 }
@@ -68,7 +70,9 @@ const MAX_QUANTITY = 50;
 function unitAdjustment(groups: ProductOptionGroupsView, unit: DraftUnit) {
   return groups
     .flatMap((g) => g.options)
-    .filter((o) => Object.values(unit.selection).some((ids) => ids.includes(o.id)))
+    .filter((o) =>
+      Object.values(unit.selection).some((ids) => ids.includes(o.id)),
+    )
     .reduce((sum, o) => sum + o.priceAdjustment, 0);
 }
 
@@ -91,7 +95,9 @@ export function OptionPickerDialog({
 }) {
   const { locale, t } = useLocale();
   const nextUnitId = useRef(1);
-  const [units, setUnits] = useState<DraftUnit[]>([{ id: 0, selection: {}, quantity: 1 }]);
+  const [units, setUnits] = useState<DraftUnit[]>([
+    { id: 0, selection: {}, quantity: 1 },
+  ]);
 
   function reset() {
     nextUnitId.current = 1;
@@ -123,7 +129,9 @@ export function OptionPickerDialog({
   function setUnitQuantity(unitId: number, next: number) {
     const clamped = Math.min(MAX_QUANTITY, Math.max(1, next));
     setUnits((prev) =>
-      prev.map((unit) => (unit.id === unitId ? { ...unit, quantity: clamped } : unit)),
+      prev.map((unit) =>
+        unit.id === unitId ? { ...unit, quantity: clamped } : unit,
+      ),
     );
   }
 
@@ -131,12 +139,17 @@ export function OptionPickerDialog({
     setUnits((prev) => {
       const last = prev[prev.length - 1];
       const id = nextUnitId.current++;
-      return [...prev, { id, selection: last ? { ...last.selection } : {}, quantity: 1 }];
+      return [
+        ...prev,
+        { id, selection: last ? { ...last.selection } : {}, quantity: 1 },
+      ];
     });
   }
 
   function removeUnit(unitId: number) {
-    setUnits((prev) => (prev.length <= 1 ? prev : prev.filter((u) => u.id !== unitId)));
+    setUnits((prev) =>
+      prev.length <= 1 ? prev : prev.filter((u) => u.id !== unitId),
+    );
   }
 
   function handleConfirm() {
@@ -163,7 +176,8 @@ export function OptionPickerDialog({
   }
 
   const grandTotal = units.reduce(
-    (sum, unit) => sum + (basePrice + unitAdjustment(groups, unit)) * unit.quantity,
+    (sum, unit) =>
+      sum + (basePrice + unitAdjustment(groups, unit)) * unit.quantity,
     0,
   );
 
@@ -179,11 +193,6 @@ export function OptionPickerDialog({
         <DialogHeader>
           <DialogTitle>{productName}</DialogTitle>
         </DialogHeader>
-        {/* overflow-x-hidden is required, not decorative: setting only
-         * overflow-y forces the browser to treat overflow-x as "auto" too,
-         * so a couple of stray pixels (e.g. the w-full buttons' hover
-         * scale effect bleeding past the edge) was enough to spawn a
-         * horizontal scrollbar under the vertical one. */}
         <div className="max-h-[70vh] space-y-3 overflow-x-hidden overflow-y-auto pe-1">
           {units.map((unit, index) => {
             const adjustment = unitAdjustment(groups, unit);
@@ -215,9 +224,9 @@ export function OptionPickerDialog({
                       {group.options
                         .filter((option) => option.isActive)
                         .map((option) => {
-                          const checked = (unit.selection[group.id] ?? []).includes(
-                            option.id,
-                          );
+                          const checked = (
+                            unit.selection[group.id] ?? []
+                          ).includes(option.id);
                           return (
                             <label
                               key={option.id}
@@ -253,9 +262,18 @@ export function OptionPickerDialog({
                                 {option.name}
                               </span>
                               <span className="text-xs text-muted-foreground">
-                                {formatCurrency(basePrice + option.priceAdjustment, locale, true)}{" "}
-                                ({formulaAdjustment(basePrice, option.priceAdjustment, locale)}){" "}
-                                {CURRENCY_LABEL[locale]}
+                                {formatCurrency(
+                                  basePrice + option.priceAdjustment,
+                                  locale,
+                                  true,
+                                )}{" "}
+                                (
+                                {formulaAdjustment(
+                                  basePrice,
+                                  option.priceAdjustment,
+                                  locale,
+                                )}
+                                ) {CURRENCY_LABEL[locale]}
                               </span>
                             </label>
                           );
@@ -273,7 +291,9 @@ export function OptionPickerDialog({
                       variant="outline"
                       className="cursor-pointer"
                       disabled={unit.quantity <= 1}
-                      onClick={() => setUnitQuantity(unit.id, unit.quantity - 1)}
+                      onClick={() =>
+                        setUnitQuantity(unit.id, unit.quantity - 1)
+                      }
                     >
                       <Minus className="size-4" />
                     </Button>
@@ -286,7 +306,9 @@ export function OptionPickerDialog({
                       variant="outline"
                       className="cursor-pointer"
                       disabled={unit.quantity >= MAX_QUANTITY}
-                      onClick={() => setUnitQuantity(unit.id, unit.quantity + 1)}
+                      onClick={() =>
+                        setUnitQuantity(unit.id, unit.quantity + 1)
+                      }
                     >
                       <Plus className="size-4" />
                     </Button>
@@ -294,7 +316,8 @@ export function OptionPickerDialog({
                 </div>
 
                 <div className="rounded-lg bg-muted/40 p-2 text-center text-xs font-semibold tabular-nums">
-                  {unit.quantity}({formulaAdjustment(basePrice, adjustment, locale)}) ={" "}
+                  {unit.quantity}(
+                  {formulaAdjustment(basePrice, adjustment, locale)}) ={" "}
                   {formatCurrency(lineTotal, locale)}
                 </div>
               </div>
@@ -311,8 +334,11 @@ export function OptionPickerDialog({
             {t.productOptions.addAnotherButton}
           </Button>
 
-          <Button className="w-full cursor-pointer" onClick={handleConfirm}>
-            {t.common.add} — {formatCurrency(grandTotal, locale)}
+          <Button
+            className="w-full cursor-pointer hover:scale-101"
+            onClick={handleConfirm}
+          >
+            {t.common.add} {formatCurrency(grandTotal, locale)}
           </Button>
         </div>
       </DialogContent>

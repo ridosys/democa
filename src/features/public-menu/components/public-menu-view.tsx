@@ -59,7 +59,10 @@ type CartLine = {
 };
 
 function optionsKey(options: PickedOption[]): string {
-  return options.map((o) => o.optionId ?? o.optionName).sort().join("|");
+  return options
+    .map((o) => o.optionId ?? o.optionName)
+    .sort()
+    .join("|");
 }
 
 export function PublicMenuView({
@@ -87,25 +90,25 @@ export function PublicMenuView({
     product: PublicMenuProduct;
     groups: ProductOptionGroupsView;
   } | null>(null);
-  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
+  const [idempotencyKey, setIdempotencyKey] = useState(() =>
+    crypto.randomUUID(),
+  );
   const [submitted, setSubmitted] = useState(false);
 
-  // Products load 30 at a time — the first page arrives with the page's own
-  // server render, every next page comes from /api/public-menu/products as
-  // the sentinel below scrolls into view. Category/search changes reset to
-  // a fresh first page instead of filtering the already-loaded list, so the
-  // menu never silently caps out at whatever the first page happened to
-  // contain.
-  const [products, setProducts] = useState<PublicMenuProduct[]>(initialProducts.items);
-  const [nextOffset, setNextOffset] = useState<number | null>(initialProducts.nextOffset);
+  const [products, setProducts] = useState<PublicMenuProduct[]>(
+    initialProducts.items,
+  );
+  const [nextOffset, setNextOffset] = useState<number | null>(
+    initialProducts.nextOffset,
+  );
   const [loadingProducts, setLoadingProducts] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const seenProductIdsRef = useRef<Set<string>>(new Set(initialProducts.items.map((p) => p.id)));
+  const seenProductIdsRef = useRef<Set<string>>(
+    new Set(initialProducts.items.map((p) => p.id)),
+  );
   const requestIdRef = useRef(0);
   const didMountRef = useRef(false);
 
-  // Debounce raw keystrokes before they trigger a server refetch (same
-  // 250ms pattern as PosWorkspace's own product search).
   useEffect(() => {
     const id = setTimeout(() => setQuery(rawQuery), 250);
     return () => clearTimeout(id);
@@ -121,7 +124,9 @@ export function PublicMenuView({
       if (offset > 0) params.set("offset", String(offset));
 
       try {
-        const res = await fetch(`/api/public-menu/products?${params.toString()}`);
+        const res = await fetch(
+          `/api/public-menu/products?${params.toString()}`,
+        );
         if (!res.ok) return;
         const data = (await res.json()) as PublicMenuProductFeed;
         if (requestId !== requestIdRef.current) return; // stale response
@@ -130,7 +135,9 @@ export function PublicMenuView({
           seenProductIdsRef.current = new Set(data.items.map((p) => p.id));
           setProducts(data.items);
         } else {
-          const fresh = data.items.filter((p) => !seenProductIdsRef.current.has(p.id));
+          const fresh = data.items.filter(
+            (p) => !seenProductIdsRef.current.has(p.id),
+          );
           fresh.forEach((p) => seenProductIdsRef.current.add(p.id));
           setProducts((prev) => [...prev, ...fresh]);
         }
@@ -154,16 +161,16 @@ export function PublicMenuView({
     fetchProductsPage(true, 0);
   }, [categoryId, query, fetchProductsPage]);
 
-  // Infinite scroll: load the next page once the sentinel below the grid
-  // enters the viewport. This page scrolls as a whole (no nested scroll
-  // panel like POS/Cafe Caisse), so the observer watches the viewport
-  // itself (root: null) instead of a ref'd container.
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting && nextOffset !== null && !loadingProducts) {
+        if (
+          entries[0]?.isIntersecting &&
+          nextOffset !== null &&
+          !loadingProducts
+        ) {
           fetchProductsPage(false, nextOffset);
         }
       },
@@ -175,16 +182,23 @@ export function PublicMenuView({
 
   const cartCount = cart.reduce((sum, line) => sum + line.quantity, 0);
   const lineTotal = (line: CartLine) =>
-    (line.unitPrice + line.options.reduce((s, o) => s + o.priceAdjustment, 0)) * line.quantity;
+    (line.unitPrice + line.options.reduce((s, o) => s + o.priceAdjustment, 0)) *
+    line.quantity;
   const cartTotal = cart.reduce((sum, line) => sum + lineTotal(line), 0);
 
-  function addToCart(product: PublicMenuProduct, options: PickedOption[], quantity: number) {
+  function addToCart(
+    product: PublicMenuProduct,
+    options: PickedOption[],
+    quantity: number,
+  ) {
     const key = `${product.id}|${optionsKey(options)}`;
     setCart((prev) => {
       const existing = prev.find((line) => line.key === key);
       if (existing) {
         return prev.map((line) =>
-          line.key === key ? { ...line, quantity: line.quantity + quantity } : line,
+          line.key === key
+            ? { ...line, quantity: line.quantity + quantity }
+            : line,
         );
       }
       return [
@@ -205,17 +219,16 @@ export function PublicMenuView({
   function handleProductTap(product: PublicMenuProduct) {
     startTransition(async () => {
       const groups = await fetchPublicProductOptionGroups(product.id);
-      // Always confirm through the dialog, even for a product with no
-      // option groups — OptionPickerDialog degrades gracefully to a plain
-      // quantity stepper when `groups` is empty, so this is still the one
-      // path for "how many?" instead of silently adding a single unit.
+
       setOptionPicker({ product, groups });
     });
   }
 
   function setLineQuantity(key: string, quantity: number) {
     setCart((prev) =>
-      quantity <= 0 ? prev.filter((line) => line.key !== key) : prev.map((line) => (line.key === key ? { ...line, quantity } : line)),
+      quantity <= 0
+        ? prev.filter((line) => line.key !== key)
+        : prev.map((line) => (line.key === key ? { ...line, quantity } : line)),
     );
   }
 
@@ -228,7 +241,9 @@ export function PublicMenuView({
         items: cart.map((line) => ({
           productId: line.productId,
           quantity: line.quantity,
-          optionIds: line.options.map((o) => o.optionId).filter((id): id is string => Boolean(id)),
+          optionIds: line.options
+            .map((o) => o.optionId)
+            .filter((id): id is string => Boolean(id)),
         })),
       });
       if (result.error) {
@@ -248,7 +263,9 @@ export function PublicMenuView({
       <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
         <CheckCircle2 className="size-16 text-primary" />
         <h1 className="text-lg font-semibold">{t.publicMenu.submittedTitle}</h1>
-        <p className="max-w-sm text-sm text-muted-foreground">{t.publicMenu.submittedDescription}</p>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          {t.publicMenu.submittedDescription}
+        </p>
         <Button className="cursor-pointer" onClick={() => setSubmitted(false)}>
           {t.publicMenu.orderMoreButton}
         </Button>
@@ -263,7 +280,9 @@ export function PublicMenuView({
           <BrandMark size="sm" logoUrl={logoUrl} />
           <div className="hidden sm:block">
             <p className="text-sm font-semibold leading-none">{tableName}</p>
-            <p className="text-xs text-muted-foreground">{t.publicMenu.menuTitle}</p>
+            <p className="text-xs text-muted-foreground">
+              {t.publicMenu.menuTitle}
+            </p>
           </div>
         </div>
 
@@ -312,46 +331,47 @@ export function PublicMenuView({
       ) : (
         <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3">
           {products.map((product) => (
-          <Card key={product.id} className="overflow-hidden py-0">
-            {product.image ? (
-              // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL, matches DocumentLogo's own precedent
-              <img
-                src={product.image}
-                alt={product.name}
-                className="h-32 w-full object-cover sm:h-40"
-              />
-            ) : (
-              <div className="flex h-32 w-full items-center justify-center bg-muted sm:h-40">
-                <ShoppingBag className="size-8 text-muted-foreground" />
-              </div>
-            )}
-            <CardContent className="space-y-2 p-3">
-              <p className="line-clamp-2 text-sm font-medium">{product.name}</p>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-primary">
-                  {formatCurrency(product.price, locale)}
+            <Card key={product.id} className="overflow-hidden py-0">
+              {product.image ? (
+                // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL, matches DocumentLogo's own precedent
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="h-32 w-full object-cover sm:h-40"
+                />
+              ) : (
+                <div className="flex h-32 w-full items-center justify-center bg-muted sm:h-40">
+                  <ShoppingBag className="size-8 text-muted-foreground" />
+                </div>
+              )}
+              <CardContent className="space-y-2 p-3">
+                <p className="line-clamp-2 text-sm font-medium">
+                  {product.name}
                 </p>
-                <Button
-                  size="sm"
-                  className="cursor-pointer gap-1 rounded-full"
-                  disabled={isPending}
-                  onClick={() => handleProductTap(product)}
-                >
-                  <Plus className="size-3.5" />
-                  {t.publicMenu.addButton}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-primary">
+                    {formatCurrency(product.price, locale)}
+                  </p>
+                  <Button
+                    size="sm"
+                    className="cursor-pointer gap-1 rounded-full"
+                    disabled={isPending}
+                    onClick={() => handleProductTap(product)}
+                  >
+                    <Plus className="size-3.5" />
+                    {t.publicMenu.addButton}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}
 
-      {/* Infinite-scroll trigger — 600px of lead-in so the next page is
-       * already loading before the user hits the actual bottom. Also
-       * doubles as the loading indicator between pages. */}
       <div ref={sentinelRef} className="flex justify-center py-4">
-        {loadingProducts && <Loader2 className="size-5 animate-spin text-muted-foreground" />}
+        {loadingProducts && (
+          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+        )}
       </div>
 
       {cartCount > 0 && (
@@ -361,7 +381,8 @@ export function PublicMenuView({
             onClick={() => setCartOpen(true)}
           >
             <ShoppingBag className="size-4" />
-            {t.publicMenu.viewCartButton} ({cartCount}) — {formatCurrency(cartTotal, locale)}
+            {t.publicMenu.viewCartButton} ({cartCount}){" "}
+            {formatCurrency(cartTotal, locale)}
           </Button>
         </div>
       )}
@@ -386,7 +407,10 @@ export function PublicMenuView({
               </p>
             ) : (
               cart.map((line) => (
-                <div key={line.key} className="flex gap-3 rounded-lg border p-2">
+                <div
+                  key={line.key}
+                  className="flex gap-3 rounded-lg border p-2"
+                >
                   {line.productImage ? (
                     // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL
                     <img
@@ -401,7 +425,9 @@ export function PublicMenuView({
                   )}
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="truncate text-sm font-medium">{line.productName}</p>
+                      <p className="truncate text-sm font-medium">
+                        {line.productName}
+                      </p>
                       <p className="shrink-0 text-sm font-semibold">
                         {formatCurrency(lineTotal(line), locale)}
                       </p>
@@ -429,7 +455,9 @@ export function PublicMenuView({
                         size="icon-xs"
                         variant="outline"
                         className="cursor-pointer"
-                        onClick={() => setLineQuantity(line.key, line.quantity - 1)}
+                        onClick={() =>
+                          setLineQuantity(line.key, line.quantity - 1)
+                        }
                       >
                         <Minus />
                       </Button>
@@ -441,7 +469,9 @@ export function PublicMenuView({
                         size="icon-xs"
                         variant="outline"
                         className="cursor-pointer"
-                        onClick={() => setLineQuantity(line.key, line.quantity + 1)}
+                        onClick={() =>
+                          setLineQuantity(line.key, line.quantity + 1)
+                        }
                       >
                         <Plus />
                       </Button>
@@ -461,7 +491,9 @@ export function PublicMenuView({
             )}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="public-menu-notes">{t.publicMenu.notesLabel}</Label>
+                <Label htmlFor="public-menu-notes">
+                  {t.publicMenu.notesLabel}
+                </Label>
                 <span className="text-xs text-muted-foreground">
                   {notes.length}/{NOTES_MAX_LENGTH}
                 </span>
