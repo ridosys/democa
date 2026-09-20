@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { selectedOptionSchema } from "@/features/orders/schema";
 
 export const invoiceItemSchema = z.object({
   productId: z.string().optional(),
@@ -9,6 +10,7 @@ export const invoiceItemSchema = z.object({
   unitPrice: z.coerce
     .number()
     .min(0, { error: "السعر يجب أن يكون رقماً موجباً" }),
+  options: z.array(selectedOptionSchema).optional(),
 });
 
 export const PAYMENT_LINE_METHODS = [

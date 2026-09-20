@@ -20,9 +20,11 @@ const STORAGE_KEY = "pos:lastArea";
 export function LandingChooser({
   canDashboard,
   canPos,
+  caisseHref,
 }: {
   canDashboard: boolean;
   canPos: boolean;
+  caisseHref: string;
 }) {
   const router = useRouter();
   const { t } = useLocale();
@@ -54,7 +56,7 @@ export function LandingChooser({
       // ignore
     }
     setNavigating(area);
-    router.push(area === "dashboard" ? "/dashboard" : "/caisse");
+    router.push(area === "dashboard" ? "/dashboard" : caisseHref);
   }
 
   const cards: {

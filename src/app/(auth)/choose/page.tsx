@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { canAccessDashboard, hasPermission } from "@/lib/permissions";
+import { hasFeature } from "@/lib/features";
 import { getSystemSettings } from "@/features/settings/queries";
 import { getDictionary } from "@/i18n/server";
 import { LocaleSwitcher } from "@/components/shared/locale-switcher";
@@ -13,12 +14,19 @@ export default async function ChoosePage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const [t, settings, canDashboard, canPos] = await Promise.all([
-    getDictionary(),
-    getSystemSettings(),
-    canAccessDashboard(),
-    hasPermission("POS_VIEW"),
-  ]);
+  const [t, settings, canDashboard, hasPosPermission, retailCaisseEnabled, cafeCaisseEnabled] =
+    await Promise.all([
+      getDictionary(),
+      getSystemSettings(),
+      canAccessDashboard(),
+      hasPermission("POS_VIEW"),
+      hasFeature("RETAIL_CAISSE"),
+      hasFeature("CAFE_CAISSE"),
+    ]);
+  // Whichever Caisse is actually reachable for this installation — a POS
+  // role with neither toggle on has nowhere La Caisse card can send them.
+  const canPos = hasPosPermission && (retailCaisseEnabled || cafeCaisseEnabled);
+  const caisseHref = cafeCaisseEnabled ? "/caisse/cafe" : "/caisse";
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-muted/30 p-4 py-10">
@@ -49,7 +57,7 @@ export default async function ChoosePage() {
           </div>
         </div>
 
-        <LandingChooser canDashboard={canDashboard} canPos={canPos} />
+        <LandingChooser canDashboard={canDashboard} canPos={canPos} caisseHref={caisseHref} />
 
         <p className="text-center text-xs text-muted-foreground">
           © {new Date().getFullYear()} {settings.appName}

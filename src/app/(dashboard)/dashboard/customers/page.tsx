@@ -13,6 +13,7 @@ import { CustomersTable } from "@/features/customers/components/customers-table"
 import { CustomersFilterBar } from "@/features/customers/components/customers-filter-bar";
 import { CustomerFormSheet } from "@/features/customers/components/customer-form-sheet";
 import { requirePageAccess } from "@/lib/permissions";
+import { requireFeature } from "@/lib/features";
 import { getDictionary } from "@/i18n/server";
 import type { DebtFilter, CustomerSort } from "@/features/customers/queries";
 
@@ -42,6 +43,7 @@ export default async function CustomersPage({
   }>;
 }) {
   await requirePageAccess("CUSTOMERS_VIEW");
+  await requireFeature("CUSTOMERS");
 
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);

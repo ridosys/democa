@@ -31,9 +31,14 @@ import {
   getProductProfile,
   getProductCustomersPage,
 } from "@/features/products/queries";
+import { getProductOptionGroups } from "@/features/product-options/queries";
+import { OptionGroupEditor } from "@/features/product-options/components/option-group-editor";
+import { ProductQrSection } from "@/features/products/components/product-qr-section";
 import { formatCurrency } from "@/lib/currency";
 import { formatDateTime } from "@/lib/date";
 import { requirePageAccess } from "@/lib/permissions";
+import { hasFeature } from "@/lib/features";
+import { getRequestOrigin } from "@/lib/request-origin";
 import { getDictionary, getLocale } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +57,7 @@ export default async function ProductProfilePage({
   const customersQuery = sp.q?.trim() || undefined;
   const customersPage = Math.max(1, Number(sp.page) || 1);
 
-  const [t, locale, profile, customers] = await Promise.all([
+  const [t, locale, profile, customers, productOptionsEnabled, origin] = await Promise.all([
     getDictionary(),
     getLocale(),
     getProductProfile(id),
@@ -61,8 +66,14 @@ export default async function ProductProfilePage({
       query: customersQuery,
       page: customersPage,
     }),
+    hasFeature("PRODUCT_OPTIONS"),
+    getRequestOrigin(),
   ]);
   if (!profile) notFound();
+
+  const optionGroups = productOptionsEnabled
+    ? await getProductOptionGroups(id)
+    : [];
 
   const { product, movements, orderItems, totalSold } = profile;
   // product.quantity/minStockLevel are both Prisma.Decimal — a native <=
@@ -199,6 +210,12 @@ export default async function ProductProfilePage({
             </p>
           </CardContent>
         </Card>
+
+        <ProductQrSection
+          productUrl={`${origin}/products/${product.slug}`}
+          isActive={product.status === "ACTIVE"}
+          t={t}
+        />
       </div>
 
       {product.images.length > 0 && (
@@ -223,6 +240,20 @@ export default async function ProductProfilePage({
                 </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {productOptionsEnabled && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t.productOptions.sectionTitle}</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {t.productOptions.sectionDescription}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <OptionGroupEditor productId={product.id} groups={optionGroups} />
           </CardContent>
         </Card>
       )}

@@ -18,19 +18,18 @@ function mergeColors(base: ColorTokens, override: unknown): ColorTokens {
   return { ...base, ...(override as Partial<ColorTokens>) };
 }
 
-/** Cached per-request — read by the root layout (theme CSS + title) and the
- * admin dashboard layout (sidebar app name) alike, so a single request only
- * hits the DB once for this singleton row. */
-export const getSystemSettings = cache(async (): Promise<SystemSettingsData> => {
-  const row = await prisma.systemSettings.findFirst();
-  return {
-    appName: row?.appName || companyConfig.name,
-    appShortName: row?.appShortName || companyConfig.shortName,
-    logoUrl: row?.logoUrl || companyConfig.logo,
-    colorsLight: mergeColors(companyConfig.colors.light, row?.colorsLight),
-    colorsDark: mergeColors(companyConfig.colors.dark, row?.colorsDark),
-  };
-});
+export const getSystemSettings = cache(
+  async (): Promise<SystemSettingsData> => {
+    const row = await prisma.systemSettings.findFirst();
+    return {
+      appName: row?.appName || companyConfig.name,
+      appShortName: row?.appShortName || companyConfig.shortName,
+      logoUrl: row?.logoUrl || companyConfig.logo,
+      colorsLight: mergeColors(companyConfig.colors.light, row?.colorsLight),
+      colorsDark: mergeColors(companyConfig.colors.dark, row?.colorsDark),
+    };
+  },
+);
 
 export async function getSystemSettingsRow() {
   return prisma.systemSettings.findFirst();

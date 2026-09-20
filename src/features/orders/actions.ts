@@ -214,18 +214,20 @@ export async function updateOrderItems(
         data: { price: item.price, quantity: item.quantity },
       }),
     ),
-    ...(newItems.length > 0
-      ? [
-          prisma.orderItem.createMany({
-            data: newItems.map((item) => ({
-              orderId,
-              productId: item.productId,
-              quantity: item.quantity,
-              price: item.price,
-            })),
-          }),
-        ]
-      : []),
+    // Individual creates (not createMany) because a new line may carry
+    // nested OrderItemOption rows — createMany can't create related records
+    // in the same call.
+    ...newItems.map((item) =>
+      prisma.orderItem.create({
+        data: {
+          orderId,
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
+          options: item.options?.length ? { create: item.options } : undefined,
+        },
+      }),
+    ),
     prisma.order.update({ where: { id: orderId }, data: { total } }),
   ]);
 
@@ -416,8 +418,8 @@ export async function saveOrderCustomerInfo(
 
 export async function createOrder(
   input: unknown,
-  options?: { allowNegativeStock?: boolean },
-): Promise<ActionResult> {
+  options?: { allowNegativeStock?: boolean; redirect?: boolean },
+): Promise<ActionResult & { orderId?: string }> {
   const access = await requirePermission("ORDERS_MANAGE");
   if (!access.ok) return { error: access.error };
   const t = await getDictionary();
@@ -430,10 +432,33 @@ export async function createOrder(
     if (stockError) return { error: stockError };
   }
 
-  const customer = await prisma.customer.findUnique({
-    where: { id: parsed.data.customerId },
-  });
-  if (!customer) return { error: t.orders.customerNotFoundError };
+  // A RETAIL order always resolves a real Customer through its own
+  // customer-picker UX. A walk-in DINE_IN/TAKEAWAY order may have none —
+  // Order.customerId is nullable for exactly this case, and
+  // getOrCreateInvoiceForOrder already guards every customer-dependent step
+  // against it being null.
+  let customer: {
+    id: string;
+    name: string;
+    phone: string;
+    email: string | null;
+  } | null = null;
+  if (parsed.data.customerId) {
+    customer = await prisma.customer.findUnique({
+      where: { id: parsed.data.customerId },
+    });
+    if (!customer) return { error: t.orders.customerNotFoundError };
+  }
+
+  let waiterId: string | null = null;
+  if (parsed.data.waiterId) {
+    const waiter = await prisma.waiter.findUnique({
+      where: { id: parsed.data.waiterId },
+      select: { id: true, isActive: true },
+    });
+    if (!waiter || !waiter.isActive) return { error: t.waiters.notFoundError };
+    waiterId = waiter.id;
+  }
 
   const products = await prisma.product.findMany({
     where: { id: { in: parsed.data.items.map((item) => item.productId) } },
@@ -456,11 +481,15 @@ export async function createOrder(
       prisma.order.create({
         data: {
           orderNumber,
-          customerId: customer.id,
-          customerName: customer.name,
-          customerPhone: customer.phone,
-          customerEmail: customer.email,
+          customerId: customer?.id ?? null,
+          customerName: customer?.name ?? t.orders.walkInCustomerLabel,
+          customerPhone: customer?.phone ?? "",
+          customerEmail: customer?.email ?? null,
           notes: parsed.data.notes || null,
+          type: parsed.data.type,
+          source: parsed.data.source,
+          tableId: parsed.data.tableId ?? null,
+          waiterId,
           total,
           createdById: access.adminId,
           items: {
@@ -468,6 +497,9 @@ export async function createOrder(
               productId: item.productId,
               quantity: item.quantity,
               price: item.price,
+              options: item.options?.length
+                ? { create: item.options }
+                : undefined,
             })),
           },
         },
@@ -480,6 +512,9 @@ export async function createOrder(
 
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard");
+  if (options?.redirect === false) {
+    return { success: true, orderId };
+  }
   redirect(`/dashboard/orders/${orderId}`);
 }
 

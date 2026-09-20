@@ -3,7 +3,13 @@
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, ChevronsUpDown, LogOut, Calculator } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronsUpDown,
+  LogOut,
+  Calculator,
+  LayoutGrid,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -42,6 +48,7 @@ import { useDirection } from "@/components/ui/direction";
 import { logout } from "@/features/auth/actions";
 import { cn } from "@/lib/utils";
 import type { PermissionKey } from "@/lib/permission-modules";
+import type { FeatureKey } from "@/lib/feature-catalog";
 
 const COLLAPSED_GROUPS_STORAGE_KEY = "dashboard-sidebar-collapsed-groups";
 // The native "storage" event only fires in *other* tabs than the one that
@@ -106,6 +113,8 @@ export function AppSidebar({
   appName,
   logoUrl,
   permissions,
+  features,
+  businessSettingsManagementEnabled,
   pendingOrders,
   lowStock,
   unpaidInvoices,
@@ -114,6 +123,8 @@ export function AppSidebar({
   appName: string;
   logoUrl: string | null;
   permissions: PermissionKey[] | "full";
+  features: Record<FeatureKey, boolean>;
+  businessSettingsManagementEnabled: boolean;
   pendingOrders: number;
   lowStock: number;
   unpaidInvoices: number;
@@ -123,8 +134,15 @@ export function AppSidebar({
   const t = useT();
   const { locale } = useLocale();
   const direction = useDirection();
-  const adminNavGroups = getAdminNavGroups(t, permissions);
+  const adminNavGroups = getAdminNavGroups(
+    t,
+    permissions,
+    features,
+    businessSettingsManagementEnabled,
+  );
   const canPos = permissions === "full" || permissions.includes("POS_VIEW");
+  const canRetailCaisse = canPos && features.RETAIL_CAISSE;
+  const canCaisseTables = canPos && features.CAFE_CAISSE;
   const [collapsedGroups, setGroupCollapsed] = useCollapsedGroups();
   const badgeValues: Record<string, number> = {
     pendingOrders,
@@ -290,19 +308,34 @@ export function AppSidebar({
                   </DropdownMenuLabel>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                {canPos && (
+                {(canRetailCaisse || canCaisseTables) && (
                   <>
-                    <DropdownMenuItem
-                      render={
-                        <Link
-                          href="/caisse"
-                          onClick={() => setOpenMobile(false)}
-                        />
-                      }
-                    >
-                      <Calculator />
-                      {t.admin.caisse}
-                    </DropdownMenuItem>
+                    {canRetailCaisse && (
+                      <DropdownMenuItem
+                        render={
+                          <Link
+                            href="/caisse"
+                            onClick={() => setOpenMobile(false)}
+                          />
+                        }
+                      >
+                        <Calculator />
+                        {t.admin.caisse}
+                      </DropdownMenuItem>
+                    )}
+                    {canCaisseTables && (
+                      <DropdownMenuItem
+                        render={
+                          <Link
+                            href="/caisse/cafe"
+                            onClick={() => setOpenMobile(false)}
+                          />
+                        }
+                      >
+                        <LayoutGrid />
+                        {t.admin.cafeCaisse}
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                   </>
                 )}

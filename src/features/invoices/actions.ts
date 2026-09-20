@@ -206,6 +206,9 @@ export async function createInvoice(
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               position: index + 1,
+              options: item.options?.length
+                ? { create: item.options }
+                : undefined,
             })),
           },
         },
@@ -485,6 +488,9 @@ export async function updateInvoice(
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               position: index + 1,
+              options: item.options?.length
+                ? { create: item.options }
+                : undefined,
             })),
           },
         },
@@ -816,8 +822,13 @@ export async function getOrCreateInvoiceForOrder(
     language: InvoiceLanguage;
     payments: { method: PaymentMethod; amount: number }[];
     excessToBalance?: boolean;
+    /** Skip the dashboard redirect and return { invoiceId } instead — for
+     * callers outside /dashboard (e.g. the Cafe Caisse checkout) whose role
+     * may not hold dashboard access at all, same escape hatch createInvoice
+     * already offers POS via its own redirect option. */
+    redirect?: boolean;
   },
-): Promise<ActionResult> {
+): Promise<ActionResult & { invoiceId?: string }> {
   const access = await requirePermission("INVOICES_MANAGE");
   if (!access.ok) return { error: access.error };
   const t = await getDictionary();
@@ -827,12 +838,13 @@ export async function getOrCreateInvoiceForOrder(
   });
 
   if (existing) {
+    if (options.redirect === false) return { success: true, invoiceId: existing.id };
     redirect(`/dashboard/invoices/${existing.id}`);
   }
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { items: { include: { product: true } } },
+    include: { items: { include: { product: true, options: true } } },
   });
   if (!order) return { error: t.invoices.orderNotFoundError };
 
@@ -899,6 +911,19 @@ export async function getOrCreateInvoiceForOrder(
               quantity: item.quantity,
               unitPrice: item.price,
               position: index + 1,
+              // Copy each OrderItemOption verbatim into a new
+              // InvoiceItemOption — the order's own snapshot is the source,
+              // never re-read live from ProductOption.
+              options: item.options.length
+                ? {
+                    create: item.options.map((opt) => ({
+                      groupName: opt.groupName,
+                      optionName: opt.optionName,
+                      priceAdjustment: opt.priceAdjustment,
+                      optionId: opt.optionId,
+                    })),
+                  }
+                : undefined,
             })),
           },
         },
@@ -976,6 +1001,10 @@ export async function getOrCreateInvoiceForOrder(
   revalidatePath("/dashboard");
   if (order.customerId)
     revalidatePath(`/dashboard/customers/${order.customerId}`);
+  if (options.redirect === false) {
+    revalidatePath("/caisse/cafe");
+    return { success: true, invoiceId };
+  }
   redirect(`/dashboard/invoices/${invoiceId}`);
 }
 

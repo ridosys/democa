@@ -5,6 +5,8 @@ import {
 } from "@/features/invoices/components/invoice-print-view";
 import { loadInvoicePrintData } from "@/features/invoices/print-data";
 import { requirePageAccess } from "@/lib/permissions";
+import { hasFeature } from "@/lib/features";
+import { getDictionary } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -20,10 +22,18 @@ export default async function CaisseInvoicePrintPage({
   const { id } = await params;
   const { lang: langParam, auto } = await searchParams;
 
-  const data = await loadInvoicePrintData(id);
+  const [data, t, cafeCaisseEnabled, retailCaisseEnabled] = await Promise.all([
+    loadInvoicePrintData(id),
+    getDictionary(),
+    hasFeature("CAFE_CAISSE"),
+    hasFeature("RETAIL_CAISSE"),
+  ]);
   if (!data) notFound();
 
   const lang = resolveInvoiceLang(langParam, data.invoice.language);
+  // Whichever Caisse is actually reachable — a pure Cafe install has no
+  // /caisse to go back to.
+  const homeHref = !retailCaisseEnabled && cafeCaisseEnabled ? "/caisse/cafe" : "/caisse";
 
   return (
     <InvoicePrintView
@@ -32,7 +42,9 @@ export default async function CaisseInvoicePrintPage({
       otherOutstandingInvoices={data.otherOutstandingInvoices}
       lang={lang}
       auto={auto}
-      backHref="/caisse"
+      backHref={homeHref}
+      homeHref={homeHref}
+      homeLabel={t.admin.caisse}
     />
   );
 }

@@ -10,6 +10,7 @@ import { getSystemSettings } from "@/features/settings/queries";
 import { DocumentLogo } from "@/components/shared/document-logo";
 import { formatCurrency } from "@/lib/currency";
 import { requirePageAccess } from "@/lib/permissions";
+import { requireFeature } from "@/lib/features";
 import { getDictionary, getLocale } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,7 @@ export default async function CustomerStatementPage({
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
   await requirePageAccess("CUSTOMERS_VIEW");
+  await requireFeature("CUSTOMERS");
 
   const { id } = await params;
   const requested = await searchParams;

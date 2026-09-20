@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { PermissionKey } from "@/lib/permission-modules";
 import { getDictionary } from "@/i18n/server";
 import { getFirstAccessibleHref } from "@/components/layout/admin-nav-items";
+import { getEffectiveFeatures } from "@/lib/features";
+import { isBusinessSettingsManagementEnabled } from "@/lib/env-features";
 
 // Re-exported so existing server-side imports of the module-list helpers
 // from "@/lib/permissions" keep working — the actual definitions live in
@@ -110,10 +112,20 @@ export async function getFirstAccessiblePath(): Promise<string> {
   const session = await auth();
   if (!session?.user) return "/login";
 
-  const effective = await getEffectivePermissions(session.user.id);
+  const [effective, features, t] = await Promise.all([
+    getEffectivePermissions(session.user.id),
+    getEffectiveFeatures(),
+    getDictionary(),
+  ]);
   const permissions = effective === "full" ? "full" : Array.from(effective);
-  const t = await getDictionary();
-  return getFirstAccessibleHref(t, permissions) ?? "/dashboard/access-denied";
+  return (
+    getFirstAccessibleHref(
+      t,
+      permissions,
+      features,
+      isBusinessSettingsManagementEnabled(),
+    ) ?? "/dashboard/access-denied"
+  );
 }
 
 export type PermissionCheck =

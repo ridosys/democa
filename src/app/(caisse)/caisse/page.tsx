@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { canAccessDashboard } from "@/lib/permissions";
+import { requireFeature } from "@/lib/features";
 import { getLocale } from "@/i18n/server";
 import { getSystemSettings } from "@/features/settings/queries";
 import {
@@ -12,6 +13,8 @@ import { PosWorkspace } from "@/features/pos/components/pos-workspace";
 export const dynamic = "force-dynamic";
 
 export default async function CaissePage() {
+  await requireFeature("RETAIL_CAISSE");
+
   const [session, settings, locale, canDashboard, categories, products, customers] =
     await Promise.all([
       auth(),

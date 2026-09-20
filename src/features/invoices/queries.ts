@@ -42,7 +42,14 @@ export async function getInvoicesPage({
   const [items, total] = await Promise.all([
     prisma.invoice.findMany({
       where,
-      include: { _count: { select: { items: true } } },
+      include: {
+        _count: { select: { items: true } },
+        // Only ever read here to decide what the list's "customer" column
+        // displays (a Cafe/dine-in row shows its waiter instead) — never
+        // used to derive money figures, which stay on Invoice's own
+        // fields.
+        order: { select: { type: true, waiter: { select: { name: true } } } },
+      },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * INVOICES_PAGE_SIZE,
       take: INVOICES_PAGE_SIZE,

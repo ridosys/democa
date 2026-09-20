@@ -73,6 +73,8 @@ export default async function InvoicesPage({
               createdAt: item.createdAt,
               _count: item._count,
               balanceEffectApplied: Number(item.balanceEffectApplied),
+              orderType: item.order?.type ?? null,
+              waiterName: item.order?.waiter?.name ?? null,
             }))}
           />
           <DataTablePagination

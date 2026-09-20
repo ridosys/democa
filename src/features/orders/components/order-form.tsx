@@ -488,7 +488,7 @@ export function OrderForm({
                   render={({ field }) => (
                     <CustomerPicker
                       customers={customers}
-                      value={field.value}
+                      value={field.value ?? ""}
                       onChange={(customer) => {
                         field.onChange(customer?.id ?? "");
                         setSelectedCustomer(customer);

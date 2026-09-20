@@ -29,6 +29,7 @@ import { CustomerStatementPanel } from "@/features/customers/components/statemen
 import { resolveDateRange } from "@/features/dashboard/date-range";
 import { formatCurrency } from "@/lib/currency";
 import { requirePageAccess } from "@/lib/permissions";
+import { requireFeature } from "@/lib/features";
 import { getDictionary, getLocale } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +47,7 @@ export default async function CustomerProfilePage({
   }>;
 }) {
   await requirePageAccess("CUSTOMERS_VIEW");
+  await requireFeature("CUSTOMERS");
 
   const { id } = await params;
   const requestedParams = await searchParams;
@@ -253,6 +255,11 @@ export default async function CustomerProfilePage({
                 createdAt: invoice.createdAt,
                 _count: { items: invoice.items.length },
                 balanceEffectApplied: Number(invoice.balanceEffectApplied),
+                // A customer's own invoice list is Retail by construction
+                // (Cafe orders never carry a customerId — see Phase 1), so
+                // this column never needs the waiter swap here.
+                orderType: null,
+                waiterName: null,
               }))}
             />
           )}

@@ -16,10 +16,14 @@ import {
   UserCog,
   ShieldCheck,
   Palette,
+  LayoutGrid,
+  Store,
+  Contact,
   type LucideIcon,
 } from "lucide-react";
 import type { Dictionary } from "@/i18n/dictionaries";
 import type { PermissionKey } from "@/lib/permission-modules";
+import type { FeatureKey } from "@/lib/feature-catalog";
 
 export type AdminNavBadgeKey = "pendingOrders" | "lowStock" | "unpaidInvoices";
 
@@ -32,6 +36,11 @@ export type AdminNavItem = {
    * (or has full access). Omitted entirely means always visible — only the
    * dashboard overview link itself has no gate. */
   permission?: PermissionKey;
+  /** Nav item is only shown when this feature is enabled for the current
+   * installation (see src/lib/feature-catalog.ts). Omitted means always
+   * visible w.r.t. features — independent of, and in addition to,
+   * `permission`. */
+  requiredFeature?: FeatureKey;
 };
 
 export type AdminNavGroup = {
@@ -41,15 +50,26 @@ export type AdminNavGroup = {
 
 function canSee(
   permissions: PermissionKey[] | "full",
+  features: Record<FeatureKey, boolean>,
   permission?: PermissionKey,
+  requiredFeature?: FeatureKey,
 ): boolean {
-  if (!permission) return true;
-  return permissions === "full" || permissions.includes(permission);
+  if (permission && permissions !== "full" && !permissions.includes(permission)) {
+    return false;
+  }
+  if (requiredFeature && !features[requiredFeature]) return false;
+  return true;
 }
 
 export function getAdminNavGroups(
   t: Dictionary,
   permissions: PermissionKey[] | "full",
+  features: Record<FeatureKey, boolean>,
+  /** Deployment-level kill switch (see src/lib/env-features.ts) — computed
+   * server-side and passed in rather than read here, since this function
+   * also runs inside the client AppSidebar bundle where a non-public env
+   * var would just read as undefined. */
+  businessSettingsManagementEnabled: boolean,
 ): AdminNavGroup[] {
   const groups: AdminNavGroup[] = [
     {
@@ -93,6 +113,7 @@ export function getAdminNavGroups(
           label: t.admin.customers,
           icon: Users,
           permission: "CUSTOMERS_VIEW",
+          requiredFeature: "CUSTOMERS",
         },
         {
           href: "/dashboard/orders",
@@ -100,6 +121,20 @@ export function getAdminNavGroups(
           icon: ShoppingCart,
           badgeKey: "pendingOrders",
           permission: "ORDERS_VIEW",
+        },
+        {
+          href: "/dashboard/tables",
+          label: t.admin.tables,
+          icon: LayoutGrid,
+          permission: "ORDERS_VIEW",
+          requiredFeature: "TABLES",
+        },
+        {
+          href: "/dashboard/waiters",
+          label: t.admin.waiters,
+          icon: Contact,
+          permission: "ORDERS_VIEW",
+          requiredFeature: "WAITERS",
         },
         {
           href: "/dashboard/invoices",
@@ -184,6 +219,23 @@ export function getAdminNavGroups(
           icon: Palette,
           permission: "SETTINGS_MANAGE",
         },
+        ...(businessSettingsManagementEnabled
+          ? [
+              {
+                href: "/dashboard/settings/business",
+                label: t.admin.business,
+                icon: Store,
+                permission: "SETTINGS_MANAGE" as const,
+                // No requiredFeature here on purpose — this is the page
+                // that turns Cafe features on in the first place, gating
+                // it behind a feature would be self-locking for a fresh
+                // RETAIL install. businessSettingsManagementEnabled is a
+                // separate, deployment-level (env var) switch, not an
+                // admin-editable FeatureKey, so it can't self-lock the
+                // same way.
+              },
+            ]
+          : []),
       ],
     },
   ];
@@ -191,7 +243,9 @@ export function getAdminNavGroups(
   return groups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => canSee(permissions, item.permission)),
+      items: group.items.filter((item) =>
+        canSee(permissions, features, item.permission, item.requiredFeature),
+      ),
     }))
     .filter((group) => group.items.length > 0);
 }
@@ -206,12 +260,20 @@ export function getAdminNavGroups(
 export function getFirstAccessibleHref(
   t: Dictionary,
   permissions: PermissionKey[] | "full",
+  features: Record<FeatureKey, boolean>,
+  businessSettingsManagementEnabled: boolean,
 ): string | null {
-  const groups = getAdminNavGroups(t, permissions);
+  const groups = getAdminNavGroups(t, permissions, features, businessSettingsManagementEnabled);
   const firstDashboardHref = groups[0]?.items[0]?.href;
   if (firstDashboardHref) return firstDashboardHref;
   // La Caisse is intentionally absent from the sidebar, but a POS-only role
-  // still needs somewhere to land instead of the access-denied dead end.
-  if (canSee(permissions, "POS_VIEW")) return "/caisse";
+  // still needs somewhere to land instead of the access-denied dead end —
+  // whichever Caisse is actually reachable for this installation, since
+  // requireFeature() on the target page would otherwise immediately bounce
+  // them straight back to access-denied.
+  if (canSee(permissions, features, "POS_VIEW")) {
+    if (features.CAFE_CAISSE) return "/caisse/cafe";
+    if (features.RETAIL_CAISSE) return "/caisse";
+  }
   return null;
 }

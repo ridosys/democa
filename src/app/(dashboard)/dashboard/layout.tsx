@@ -7,6 +7,8 @@ import { auth } from "@/lib/auth";
 import { getDashboardStats } from "@/features/dashboard/queries";
 import { getSystemSettings } from "@/features/settings/queries";
 import { getEffectivePermissions } from "@/lib/permissions";
+import { getEffectiveFeatures } from "@/lib/features";
+import { isBusinessSettingsManagementEnabled } from "@/lib/env-features";
 
 export default async function DashboardLayout({
   children,
@@ -26,7 +28,10 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  const effectivePermissions = await getEffectivePermissions(session.user.id);
+  const [effectivePermissions, features] = await Promise.all([
+    getEffectivePermissions(session.user.id),
+    getEffectiveFeatures(),
+  ]);
   const permissions =
     effectivePermissions === "full"
       ? ("full" as const)
@@ -39,6 +44,8 @@ export default async function DashboardLayout({
         appName={settings.appName}
         logoUrl={settings.logoUrl}
         permissions={permissions}
+        features={features}
+        businessSettingsManagementEnabled={isBusinessSettingsManagementEnabled()}
         pendingOrders={stats.pendingOrders}
         lowStock={stats.lowStockCount}
         unpaidInvoices={stats.unpaidInvoicesCount}

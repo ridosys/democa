@@ -1,7 +1,11 @@
+import Link from "next/link";
+import { Calculator } from "lucide-react";
 import { InvoicePrintButton } from "@/features/invoices/components/invoice-print-button";
 import { InvoicePdfButton } from "@/features/invoices/components/invoice-pdf-button";
 import { InvoicePrintTotals } from "@/features/invoices/components/invoice-print-totals";
 import { BackButton } from "@/components/shared/back-button";
+import { BrandMark } from "@/components/shared/brand-mark";
+import { Button } from "@/components/ui/button";
 import { DocumentLogo } from "@/components/shared/document-logo";
 import type { getInvoiceById } from "@/features/invoices/queries";
 import type { getSystemSettings } from "@/features/settings/queries";
@@ -151,6 +155,8 @@ export async function InvoicePrintView({
   lang,
   auto,
   backHref,
+  homeHref,
+  homeLabel,
   otherOutstandingInvoices,
 }: {
   invoice: InvoiceData;
@@ -158,6 +164,12 @@ export async function InvoicePrintView({
   lang: Lang;
   auto?: string;
   backHref: string;
+  /** An explicit "go home" destination alongside the browser-history Back
+   * button — e.g. the Caisse a cashier printed this invoice from. Omitted
+   * on the dashboard print route, where backHref already points at the
+   * invoice's own page. */
+  homeHref?: string;
+  homeLabel?: string;
   otherOutstandingInvoices: OutstandingInvoice[];
 }) {
   const uiT = await getDictionary();
@@ -184,8 +196,23 @@ export async function InvoicePrintView({
       className="mx-auto max-w-2xl space-y-6 p-6 print:max-w-none print:p-0"
     >
       <style>{"@page { size: A5; margin: 5mm; }"}</style>
-      <div className="flex items-center justify-between gap-2 print:hidden">
-        <BackButton fallbackHref={backHref} />
+      <div className="flex items-center justify-between gap-2 rounded-xl border bg-card px-4 py-3 print:hidden">
+        <div className="flex items-center gap-3">
+          <BrandMark size="sm" logoUrl={settings.logoUrl} />
+          <BackButton fallbackHref={backHref} />
+          {homeHref && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="cursor-pointer"
+              nativeButton={false}
+              render={<Link href={homeHref} />}
+            >
+              <Calculator className="size-4" />
+              {homeLabel}
+            </Button>
+          )}
+        </div>
         <div className="flex gap-2">
           <InvoicePdfButton
             targetId="invoice-card"

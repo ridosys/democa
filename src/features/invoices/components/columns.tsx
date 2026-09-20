@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, Printer } from "lucide-react";
+import { Eye, Printer, Contact } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,11 @@ export type InvoiceRow = {
   createdAt: Date;
   _count: { items: number };
   balanceEffectApplied: number;
+  /** Null for a Retail POS quick-sale invoice (no Order at all) or a
+   * Retail Order. Only a Cafe order (DINE_IN/TAKEAWAY) with a waiter
+   * assigned makes the customer column show the waiter instead. */
+  orderType: "RETAIL" | "DINE_IN" | "TAKEAWAY" | null;
+  waiterName: string | null;
 };
 
 export function getInvoiceColumns(
@@ -51,6 +56,19 @@ export function getInvoiceColumns(
     {
       accessorKey: "customerName",
       header: t.invoices.columnCustomer,
+      cell: ({ row }) => {
+        const { orderType, waiterName } = row.original;
+        const isCafeOrder = orderType === "DINE_IN" || orderType === "TAKEAWAY";
+        if (isCafeOrder && waiterName) {
+          return (
+            <span className="flex items-center gap-1.5">
+              <Contact className="size-3.5 shrink-0 text-muted-foreground" />
+              {waiterName}
+            </span>
+          );
+        }
+        return row.original.customerName;
+      },
     },
     {
       id: "customerPhone",

@@ -6,11 +6,20 @@ import { getDictionary } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function AccessDeniedPage() {
-  const [t, backHref] = await Promise.all([
+export default async function AccessDeniedPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ reason?: string }>;
+}) {
+  const [t, backHref, params] = await Promise.all([
     getDictionary(),
     getFirstAccessiblePath(),
+    searchParams,
   ]);
+  const description =
+    params.reason === "feature"
+      ? t.accessDenied.featureDescription
+      : t.accessDenied.description;
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-24 text-center">
@@ -20,7 +29,7 @@ export default async function AccessDeniedPage() {
       <div className="space-y-2">
         <h1 className="text-xl font-semibold">{t.accessDenied.title}</h1>
         <p className="max-w-sm text-sm text-muted-foreground">
-          {t.accessDenied.description}
+          {description}
         </p>
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3">

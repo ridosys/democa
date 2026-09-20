@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
+import { requireFeatureForAction } from "@/lib/features";
 import { getDictionary } from "@/i18n/server";
 import { createInvoice } from "@/features/invoices/actions";
 import type { InvoiceLanguage } from "@/generated/prisma/enums";
@@ -42,6 +43,8 @@ export async function createPosSale(input: unknown): Promise<
 > {
   const access = await requirePermission("POS_MANAGE");
   if (!access.ok) return { error: access.error };
+  const featureAccess = await requireFeatureForAction("RETAIL_CAISSE");
+  if (!featureAccess.ok) return { error: featureAccess.error };
   const t = await getDictionary();
 
   const parsed = posSaleSchema.safeParse(input);
@@ -54,9 +57,6 @@ export async function createPosSale(input: unknown): Promise<
   });
   if (!customer) return { error: t.pos.noCustomerError };
 
-  // Confirm every product still exists and is active, and price every line
-  // from the authoritative first price (price1) — the client never sends a
-  // price.
   const productIds = data.items.map((item) => item.productId);
   const products = await prisma.product.findMany({
     where: { id: { in: productIds }, status: "ACTIVE" },
@@ -87,17 +87,11 @@ export async function createPosSale(input: unknown): Promise<
   const isCash = method === "CASH";
   const isBalance = method === "BALANCE";
 
-  // من الرصيد can never overpay itself, so it only ever settles up to the
-  // total. For every other method the cashier is asked (default: no) whether
-  // an overpayment extends the customer's balance — if not, it's cash change
-  // for نقداً and simply not recorded otherwise.
-  const excessToBalance =
-    !isBalance && (data.payment.excessToBalance ?? false);
+  const excessToBalance = !isBalance && (data.payment.excessToBalance ?? false);
   const applied =
     !isBalance && excessToBalance ? tendered : Math.min(tendered, total);
   const credited = excessToBalance ? Math.max(0, tendered - total) : 0;
-  const change =
-    isCash && !excessToBalance ? Math.max(0, tendered - total) : 0;
+  const change = isCash && !excessToBalance ? Math.max(0, tendered - total) : 0;
 
   if (isBalance && !data.payment.allowNegativeBalance) {
     const available = Number(customer.balance);

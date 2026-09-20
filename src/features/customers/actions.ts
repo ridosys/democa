@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requirePermission, hasPermission } from "@/lib/permissions";
+import { requireFeatureForAction } from "@/lib/features";
 import { destroyCloudinaryAsset } from "@/lib/cloudinary";
 import { customerSchema } from "@/features/customers/schema";
 import { normalizeArabicName } from "@/lib/arabic-name";
@@ -23,6 +24,8 @@ export async function createCustomer(
 ): Promise<CreateCustomerResult> {
   const access = await requirePermission("CUSTOMERS_MANAGE");
   if (!access.ok) return { error: access.error };
+  const featureAccess = await requireFeatureForAction("CUSTOMERS");
+  if (!featureAccess.ok) return { error: featureAccess.error };
   const t = await getDictionary();
 
   const parsed = customerSchema.safeParse(input);
@@ -71,6 +74,8 @@ export async function updateCustomer(
 ): Promise<ActionResult> {
   const access = await requirePermission("CUSTOMERS_MANAGE");
   if (!access.ok) return { error: access.error };
+  const featureAccess = await requireFeatureForAction("CUSTOMERS");
+  if (!featureAccess.ok) return { error: featureAccess.error };
   const t = await getDictionary();
 
   const parsed = customerSchema.safeParse(input);
@@ -172,6 +177,8 @@ export async function adjustCustomerBalanceManual(
 ): Promise<ActionResult> {
   const access = await requirePermission("CUSTOMERS_MANAGE");
   if (!access.ok) return { error: access.error };
+  const featureAccess = await requireFeatureForAction("CUSTOMERS");
+  if (!featureAccess.ok) return { error: featureAccess.error };
   const t = await getDictionary();
 
   if (!Number.isFinite(input.delta) || Math.abs(input.delta) < 0.005) {
@@ -217,6 +224,8 @@ export async function deleteCustomer(
 ): Promise<ActionResult> {
   const access = await requirePermission("CUSTOMERS_MANAGE");
   if (!access.ok) return { error: access.error };
+  const featureAccess = await requireFeatureForAction("CUSTOMERS");
+  if (!featureAccess.ok) return { error: featureAccess.error };
   if (!isDeletePasswordValid(password)) return { error: await getDeletePasswordError() };
   const t = await getDictionary();
 
@@ -249,6 +258,8 @@ export async function deleteCustomers(
 ): Promise<ActionResult> {
   const access = await requirePermission("CUSTOMERS_MANAGE");
   if (!access.ok) return { error: access.error };
+  const featureAccess = await requireFeatureForAction("CUSTOMERS");
+  if (!featureAccess.ok) return { error: featureAccess.error };
   if (ids.length === 0) return { success: true };
   if (!isDeletePasswordValid(password)) return { error: await getDeletePasswordError() };
   const t = await getDictionary();
@@ -294,6 +305,8 @@ export async function toggleCustomerFavorite(
 ): Promise<ActionResult> {
   const access = await requirePermission("CUSTOMERS_MANAGE");
   if (!access.ok) return { error: access.error };
+  const featureAccess = await requireFeatureForAction("CUSTOMERS");
+  if (!featureAccess.ok) return { error: featureAccess.error };
 
   await prisma.customer.update({
     where: { id },
