@@ -38,6 +38,7 @@ import {
 import { BrandMark } from "@/components/shared/brand-mark";
 import { AccountMenu } from "@/components/shared/account-menu";
 import { LocaleSwitcher } from "@/components/shared/locale-switcher";
+import { FullscreenToggle } from "@/components/shared/fullscreen-toggle";
 import { CategoryRail, type PosCategory } from "@/features/pos/components/category-rail";
 import { ProductGrid } from "@/features/pos/components/product-grid";
 import type { PosProduct } from "@/features/pos/queries";
@@ -299,6 +300,7 @@ export function OpenOrderWorkspace({
       onAddProduct={handleAddProduct}
       onIncrement={handleAddProduct}
       onDecrement={handleDecrementProduct}
+      showStock={false}
     />
   );
 
@@ -410,6 +412,7 @@ export function OpenOrderWorkspace({
         )}
 
         <div className="ms-auto flex shrink-0 items-center gap-2">
+          <FullscreenToggle />
           <LocaleSwitcher />
           <AccountMenu adminName={adminName} canDashboard={canDashboard} />
         </div>

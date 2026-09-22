@@ -3,6 +3,7 @@ import { LayoutGrid, ShoppingBag } from "lucide-react";
 import { BrandMark } from "@/components/shared/brand-mark";
 import { AccountMenu } from "@/components/shared/account-menu";
 import { LocaleSwitcher } from "@/components/shared/locale-switcher";
+import { FullscreenToggle } from "@/components/shared/fullscreen-toggle";
 import { Card, CardContent } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
 import { getSystemSettings } from "@/features/settings/queries";
@@ -58,6 +59,7 @@ export default async function CaisseTablesPage() {
         </div>
         <div className="ms-auto flex shrink-0 items-center gap-2">
           <NewTakeawayButton label={t.tables.caisse.newTakeawayButton} />
+          <FullscreenToggle />
           <LocaleSwitcher />
           <AccountMenu adminName={session?.user?.name ?? ""} canDashboard={canDashboard} />
         </div>

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/shared/brand-mark";
 import { AccountMenu } from "@/components/shared/account-menu";
 import { LocaleSwitcher } from "@/components/shared/locale-switcher";
+import { FullscreenToggle } from "@/components/shared/fullscreen-toggle";
 import { getOpenOrderCartView } from "@/features/tables/queries";
 import { getActiveWaiters } from "@/features/waiters/queries";
 import { getSystemSettings } from "@/features/settings/queries";
@@ -53,6 +54,7 @@ export default async function CafeTakeawayWaiterPage({
           <p className="truncate text-xs text-muted-foreground">{t.tables.caisse.takeawayLabel}</p>
         </div>
         <div className="ms-auto flex shrink-0 items-center gap-2">
+          <FullscreenToggle />
           <LocaleSwitcher />
           <AccountMenu adminName={session?.user?.name ?? ""} canDashboard={canDashboard} />
         </div>

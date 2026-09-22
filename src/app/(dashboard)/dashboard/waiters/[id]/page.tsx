@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { CustomerAvatar } from "@/components/shared/customer-avatar";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { getWaiterProfile } from "@/features/waiters/queries";
+import { WaiterDailyReportForm } from "@/features/waiters/components/waiter-daily-report-form";
 import { requirePageAccess } from "@/lib/permissions";
 import { requireFeature } from "@/lib/features";
 import { formatCurrency } from "@/lib/currency";
@@ -147,6 +148,15 @@ export default async function WaiterProfilePage({
               formatValue={(value) => formatCurrency(value, locale)}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t.waiters.dailyReport.title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <WaiterDailyReportForm waiterId={waiter.id} />
         </CardContent>
       </Card>
 

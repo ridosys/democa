@@ -47,6 +47,7 @@ export function ProductGrid({
   onAddProduct,
   onIncrement,
   onDecrement,
+  showStock = true,
 }: {
   initial: Feed;
   categoryId: string;
@@ -58,6 +59,8 @@ export function ProductGrid({
   onAddProduct: (product: PosProduct) => void;
   onIncrement: (product: PosProduct) => void;
   onDecrement: (product: PosProduct) => void;
+  /** Café caisse hides the stock count on product cards. */
+  showStock?: boolean;
 }) {
   const { locale, t } = useLocale();
   const [items, setItems] = useState<PosProduct[]>(initial.items);
@@ -211,7 +214,7 @@ export function ProductGrid({
                 onIncrement={() => onIncrement(product)}
                 onDecrement={() => onDecrement(product)}
                 addLabel={t.pos.addToCart}
-                stockLabel={t.pos.stockLabel}
+                stockLabel={showStock ? t.pos.stockLabel : null}
               />
             ))}
           </div>
@@ -260,7 +263,7 @@ function ProductCard({
   onIncrement: () => void;
   onDecrement: () => void;
   addLabel: string;
-  stockLabel: string;
+  stockLabel: string | null;
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
 
@@ -300,14 +303,18 @@ function ProductCard({
           {formatCurrency(product.price, locale)}
         </p>
         <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-          <span
-            className={cn(
-              "text-[11px] tabular-nums",
-              product.stock <= 0 ? "text-destructive" : "text-muted-foreground",
-            )}
-          >
-            {stockLabel}: {product.stock}
-          </span>
+          {stockLabel !== null ? (
+            <span
+              className={cn(
+                "text-[11px] tabular-nums",
+                product.stock <= 0 ? "text-destructive" : "text-muted-foreground",
+              )}
+            >
+              {stockLabel}: {product.stock}
+            </span>
+          ) : (
+            <span />
+          )}
           {quantity > 0 ? (
             <div className="flex items-center gap-1">
               <Button

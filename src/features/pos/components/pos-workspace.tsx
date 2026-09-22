@@ -7,12 +7,14 @@ import {
   LayoutDashboard,
   ChevronDown,
   Loader2,
-  Maximize2,
-  Minimize2,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Layout } from "react-resizable-panels";
 import { Button } from "@/components/ui/button";
+import {
+  FullscreenAutoEnter,
+  FullscreenToggle,
+} from "@/components/shared/fullscreen-toggle";
 import { Input } from "@/components/ui/input";
 import {
   ResizablePanelGroup,
@@ -239,54 +241,6 @@ export function PosWorkspace({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  useEffect(() => {
-    function onChange() {
-      setIsFullscreen(Boolean(document.fullscreenElement));
-    }
-    document.addEventListener("fullscreenchange", onChange);
-    onChange();
-
-    function enterFullscreen() {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen?.().catch(() => {});
-      }
-    }
-    // Default to fullscreen, like pressing F11 on open. No browser will
-    // honor requestFullscreen() without a user gesture in the same event —
-    // that's a hard platform restriction (Chrome/Firefox/Safari all enforce
-    // it), so a bare call right on mount is silently rejected on every
-    // reload. The listeners below catch the cashier's very first pointer,
-    // touch or key interaction anywhere on the page instead — still a valid
-    // gesture — captured before any inner element can stop it from
-    // bubbling, so fullscreen engages on that very first tap/click rather
-    // than needing a second, separate one on the toggle button.
-    enterFullscreen();
-    const gestureEvents = ["pointerdown", "touchstart", "keydown"] as const;
-    gestureEvents.forEach((type) =>
-      document.addEventListener(type, enterFullscreen, {
-        once: true,
-        capture: true,
-      }),
-    );
-
-    return () => {
-      document.removeEventListener("fullscreenchange", onChange);
-      gestureEvents.forEach((type) =>
-        document.removeEventListener(type, enterFullscreen, { capture: true }),
-      );
-    };
-  }, []);
-
-  function toggleFullscreen() {
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
-    } else {
-      document.documentElement.requestFullscreen().catch(() => {});
-    }
-  }
-
   const cartQuantities = useMemo(() => {
     const map: Record<string, number> = {};
     for (const line of lines) map[line.product.id] = line.quantity;
@@ -492,6 +446,7 @@ export function PosWorkspace({
 
   return (
     <div className="flex h-dvh min-h-0 flex-col overflow-hidden">
+      <FullscreenAutoEnter />
       <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-card px-4">
         <div className="flex shrink-0 items-center gap-2">
           <BrandMark size="md" logoUrl={logoUrl} />
@@ -517,20 +472,7 @@ export function PosWorkspace({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={toggleFullscreen}
-            title={isFullscreen ? t.pos.exitFullscreen : t.pos.enterFullscreen}
-            aria-label={isFullscreen ? t.pos.exitFullscreen : t.pos.enterFullscreen}
-          >
-            {isFullscreen ? (
-              <Minimize2 className="size-4" />
-            ) : (
-              <Maximize2 className="size-4" />
-            )}
-          </Button>
+          <FullscreenToggle />
           <LocaleSwitcher />
           <HoldSalesMenu
             heldSales={heldSales}

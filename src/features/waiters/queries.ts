@@ -145,3 +145,79 @@ export async function getWaiterProfile(id: string, ordersPage: number = 1) {
 }
 
 export type WaiterProfile = NonNullable<Awaited<ReturnType<typeof getWaiterProfile>>>;
+
+export type WaiterDailyReportInvoice = {
+  id: string;
+  invoiceNumber: string;
+  type: "RETAIL" | "DINE_IN" | "TAKEAWAY";
+  tableName: string | null;
+  total: number;
+  paidAmount: number;
+  paymentStatus: "UNPAID" | "PARTIALLY_PAID" | "PAID";
+  createdAt: Date;
+};
+
+export type WaiterDailyReportProduct = {
+  name: string;
+  quantity: number;
+  total: number;
+};
+
+/** Every invoiced order this waiter served on one day ("YYYY-MM-DD", read
+ * as a UTC day like the rest of the app's date inputs — see
+ * parseDateInputValue), plus the same sales grouped by product, for the
+ * printable end-of-day waiter invoice. */
+export async function getWaiterDailyReport(id: string, day: Date) {
+  const waiter = await prisma.waiter.findUnique({ where: { id } });
+  if (!waiter) return null;
+
+  const from = day;
+  const to = new Date(day.getTime() + 24 * 60 * 60 * 1000);
+
+  const invoices = await prisma.invoice.findMany({
+    where: { order: { waiterId: id }, createdAt: { gte: from, lt: to } },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      invoiceNumber: true,
+      total: true,
+      paidAmount: true,
+      paymentStatus: true,
+      createdAt: true,
+      order: { select: { type: true, table: { select: { name: true } } } },
+      items: { select: { name: true, quantity: true, unitPrice: true } },
+    },
+  });
+
+  const productTotals = new Map<string, WaiterDailyReportProduct>();
+  for (const invoice of invoices) {
+    for (const item of invoice.items) {
+      const quantity = item.quantity.toNumber();
+      const lineTotal = quantity * item.unitPrice.toNumber();
+      const existing = productTotals.get(item.name);
+      if (existing) {
+        existing.quantity += quantity;
+        existing.total += lineTotal;
+      } else {
+        productTotals.set(item.name, { name: item.name, quantity, total: lineTotal });
+      }
+    }
+  }
+
+  return {
+    waiter,
+    invoices: invoices.map(
+      (invoice): WaiterDailyReportInvoice => ({
+        id: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        type: invoice.order?.type ?? "RETAIL",
+        tableName: invoice.order?.table?.name ?? null,
+        total: invoice.total.toNumber(),
+        paidAmount: invoice.paidAmount.toNumber(),
+        paymentStatus: invoice.paymentStatus,
+        createdAt: invoice.createdAt,
+      }),
+    ),
+    products: [...productTotals.values()].sort((a, b) => b.total - a.total),
+  };
+}
