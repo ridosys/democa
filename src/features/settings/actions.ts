@@ -16,6 +16,7 @@ import {
   MAX_LOGO_BYTES,
 } from "./logo";
 import { getDictionary } from "@/i18n/server";
+import { isReceiptPaperSize } from "@/lib/receipt-paper";
 
 type ActionResult = { error?: string; success?: boolean };
 
@@ -47,6 +48,30 @@ export async function updateSystemSettings(
 
   // Layout-wide revalidation: the theme CSS and app name are rendered in
   // the root layout, so every route needs to pick up the new values.
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+/** Save the default paper size printed invoices are laid out for. */
+export async function updateReceiptPaperSize(
+  paper: unknown,
+): Promise<ActionResult> {
+  const access = await requirePermission("SETTINGS_MANAGE");
+  if (!access.ok) return { error: access.error };
+  const t = await getDictionary();
+
+  if (!isReceiptPaperSize(paper)) return { error: t.settings.validationError };
+
+  const existing = await getSystemSettingsRow();
+  if (existing) {
+    await prisma.systemSettings.update({
+      where: { id: existing.id },
+      data: { receiptPaperSize: paper },
+    });
+  } else {
+    await prisma.systemSettings.create({ data: { receiptPaperSize: paper } });
+  }
+
   revalidatePath("/", "layout");
   return { success: true };
 }

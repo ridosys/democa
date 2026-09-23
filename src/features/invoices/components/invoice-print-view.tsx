@@ -3,16 +3,26 @@ import { Calculator } from "lucide-react";
 import { InvoicePrintButton } from "@/features/invoices/components/invoice-print-button";
 import { InvoicePdfButton } from "@/features/invoices/components/invoice-pdf-button";
 import { InvoicePrintTotals } from "@/features/invoices/components/invoice-print-totals";
+import { AutoPrint } from "@/features/invoices/components/auto-print";
 import { InvoiceLangSwitcher } from "@/features/invoices/components/invoice-lang-switcher";
 import { BackButton } from "@/components/shared/back-button";
 import { BrandMark } from "@/components/shared/brand-mark";
 import { Button } from "@/components/ui/button";
-import { DocumentLogo } from "@/components/shared/document-logo";
+import { ReceiptPaper } from "@/components/shared/receipt-paper";
+import { ReceiptPaperSwitcher } from "@/components/shared/receipt-paper-switcher";
+import {
+  ReceiptBrand,
+  ReceiptRule,
+  ReceiptThankYou,
+} from "@/components/shared/receipt-parts";
 import type { getInvoiceById } from "@/features/invoices/queries";
 import type { getSystemSettings } from "@/features/settings/queries";
 import { getDictionary } from "@/i18n/server";
 import { CURRENCY_LABEL, formatCurrency } from "@/lib/currency";
 import { formatDateTime } from "@/lib/date";
+import type { ReceiptPaperSize } from "@/lib/receipt-paper";
+
+const PRINT_CONTROLS_SLOT_ID = "invoice-print-controls";
 
 export type Lang = "ar" | "en" | "fr";
 
@@ -63,8 +73,8 @@ const LABELS: Record<
     phone: "الهاتف",
     product: "نوع البضاعة",
     quantity: "العدد",
-    unitPrice: "التمن",
-    lineTotal: "الإجمالي",
+    unitPrice: "الثمن",
+    lineTotal: "المجموع",
     total: "إجمالي المنتجات",
     previousPayment: "الدفع السابق",
     previousDebts: "الحساب القديم",
@@ -90,9 +100,9 @@ const LABELS: Record<
     billTo: "Facturé à",
     phone: "Téléphone",
     product: "Produit",
-    quantity: "Quantité",
-    unitPrice: "Prix unitaire",
-    lineTotal: "Sous-total",
+    quantity: "Qté",
+    unitPrice: "P.U.",
+    lineTotal: "Total",
     total: "Total des produits",
     previousPayment: "Paiement précédent",
     previousDebts: "Ancien compte",
@@ -108,7 +118,7 @@ const LABELS: Record<
     grandTotal: "Total général",
     itemsCount: "Nombre de produits",
     totalWeight: "Poids total (kg)",
-    thankYou: "Merci pour votre confiance",
+    thankYou: "Merci pour votre confiance !",
     walkInCustomer: "Client de passage",
   },
   en: {
@@ -118,9 +128,9 @@ const LABELS: Record<
     billTo: "Bill to",
     phone: "Phone",
     product: "Product",
-    quantity: "Quantity",
-    unitPrice: "Unit price",
-    lineTotal: "Line total",
+    quantity: "Qty",
+    unitPrice: "Unit",
+    lineTotal: "Total",
     total: "Products total",
     previousPayment: "Previous payment",
     previousDebts: "Previous balance",
@@ -136,7 +146,7 @@ const LABELS: Record<
     grandTotal: "Grand total",
     itemsCount: "Number of products",
     totalWeight: "Total weight (kg)",
-    thankYou: "Thank you for your business",
+    thankYou: "Thank you for your business!",
     walkInCustomer: "Walk-in",
   },
 };
@@ -163,6 +173,8 @@ export async function InvoicePrintView({
   homeHref,
   homeLabel,
   otherOutstandingInvoices,
+  paper,
+  autoPrint = false,
 }: {
   invoice: InvoiceData;
   settings: Settings;
@@ -176,6 +188,9 @@ export async function InvoicePrintView({
   homeHref?: string;
   homeLabel?: string;
   otherOutstandingInvoices: OutstandingInvoice[];
+  paper: ReceiptPaperSize;
+  /** Open the print dialog as soon as the receipt is ready (`?autoprint=1`). */
+  autoPrint?: boolean;
 }) {
   const uiT = await getDictionary();
   const t = LABELS[lang];
@@ -195,12 +210,11 @@ export async function InvoicePrintView({
   const isPartiallyPaid = invoice.paymentStatus === "PARTIALLY_PAID";
   const previousPayment = isPartiallyPaid ? Number(invoice.paidAmount) : 0;
 
+  const currency = CURRENCY_LABEL["fr"];
+
   return (
-    <div
-      dir={dir}
-      className="mx-auto max-w-2xl space-y-6 p-6 print:max-w-none print:p-0"
-    >
-      <style>{"@page { size: A5; margin: 5mm; }"}</style>
+    <div className="space-y-6 p-4 sm:p-6 print:p-0">
+      {autoPrint && <AutoPrint />}
       <div className="flex flex-wrap items-center justify-center gap-3 print:hidden">
         <div className="flex items-center gap-3">
           <BrandMark size="sm" logoUrl={settings.logoUrl} />
@@ -219,170 +233,136 @@ export async function InvoicePrintView({
           )}
         </div>
         <div className="hidden h-6 w-px bg-border sm:block" />
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <InvoiceLangSwitcher lang={lang} />
+          <ReceiptPaperSwitcher paper={paper} />
           <InvoicePdfButton
             targetId="invoice-card"
             fileName={`${invoice.invoiceNumber}.pdf`}
             label={uiT.common.openPdf}
             autoOpen={auto === "pdf"}
+            paper={paper}
           />
           <InvoicePrintButton label={uiT.common.printSavePdf} />
         </div>
       </div>
 
+      {/* InvoicePrintTotals portals its on-screen "old account" controls
+          here, so they stay outside the printed / PDF receipt. */}
       <div
-        id="invoice-card"
-        className="rounded-xl border bg-card p-8 print:rounded-none print:border-none print:p-0"
-      >
-        <table className="w-full table-fixed border-collapse text-sm print:text-xs">
-          <colgroup>
-            <col className="w-[20%]" />
-            <col className="w-[72%]" />
-            <col className="w-[20%]" />
-            <col className="w-[25%]" />
-          </colgroup>
-          <thead>
-            <tr>
-              <th
-                colSpan={4}
-                className="border-none p-0 pb-6 text-start font-normal print:pb-4"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <DocumentLogo
-                      logoUrl={settings.logoUrl}
-                      name={settings.appName}
-                    />
-                  </div>
-                  <div className="text-end">
-                    <h2 className="text-xl font-bold print:text-base">
-                      {t.title}
-                    </h2>
-                    <p className="text-sm font-semibold text-foreground print:text-xs">
-                      {t.invoiceNumber}:{" "}
-                      <span dir="ltr">{invoice.invoiceNumber}</span>
-                    </p>
-                    <p className="text-sm font-semibold text-foreground print:text-xs">
-                      {t.date}: {formatDateTime(invoice.createdAt)}
-                    </p>
-                  </div>
-                </div>
+        id={PRINT_CONTROLS_SLOT_ID}
+        className="mx-auto max-w-md empty:hidden print:hidden"
+      />
 
-                <div className="mt-6 print:mt-4">
-                  <p className="text-sm font-semibold text-foreground print:text-xs">
-                    {t.billTo}:
-                    <span className="font-bold mx-1.5">
-                      {invoice.customerId ? invoice.customerName : t.walkInCustomer}
-                    </span>
-                  </p>
+      <div className="overflow-x-auto pb-2 print:overflow-visible print:pb-0">
+        <ReceiptPaper id="invoice-card" paper={paper} dir={dir}>
+          <ReceiptBrand logoUrl={settings.logoUrl} name={settings.appName} />
 
-                  <p className="text-sm font-semibold text-foreground print:text-xs">
-                    {t.phone}: <span dir="ltr">{invoice.customerPhone}</span>
-                  </p>
-                </div>
-              </th>
-            </tr>
-            <tr className="border-b text-start">
-              <th className="px-3 py-2 text-start font-bold border-2 border-gray-400">
-                <span className="block truncate">{t.quantity}</span>
-              </th>
-              <th className="px-3 py-2 text-start font-bold border-2 border-gray-400">
-                <span className="block truncate">{t.product}</span>
-              </th>
-              <th className="px-2 py-2 text-start font-bold border-2 border-gray-400">
-                <span className="block leading-tight whitespace-normal wrap-break-word">
-                  {t.unitPrice} {`(${CURRENCY_LABEL["fr"]})`}
-                </span>
-              </th>
-              <th className="px-2 py-2 text-start font-bold border-2 border-gray-400">
-                <span className="block leading-tight whitespace-normal wrap-break-word">
-                  {t.lineTotal} {`(${CURRENCY_LABEL["fr"]})`}
-                </span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoice.items.map((item) => (
-              <tr
-                key={item.id}
-                className="border-b font-semibold text-foreground"
-              >
-                <td className="px-3 py-2 border-2 border-gray-400">
-                  <span className="block truncate">
+          <h1 className="mt-[0.3em] text-center text-[2.2em] leading-tight font-bold uppercase">
+            {t.title}
+          </h1>
+          <p className="text-center text-[1.1em] break-all" dir="ltr">
+            {invoice.invoiceNumber}
+          </p>
+          <p className="text-center text-[1.1em]" dir="ltr">
+            {formatDateTime(invoice.createdAt)}
+          </p>
+
+          <ReceiptRule />
+
+          <p>
+            {t.billTo}:{" "}
+            {invoice.customerId ? invoice.customerName : t.walkInCustomer}
+          </p>
+          <p>
+            {t.phone}: <span dir="ltr">{invoice.customerPhone}</span>
+          </p>
+
+          <ReceiptRule />
+
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="align-top font-bold">
+                <th className="w-[14%] pe-[0.4em] pb-[0.4em] text-start">
+                  {t.quantity}
+                </th>
+                <th className="pe-[0.4em] pb-[0.4em] text-start">{t.product}</th>
+                <th className="w-[22%] pe-[0.4em] pb-[0.4em] text-end">
+                  {t.unitPrice}
+                  <br />({currency})
+                </th>
+                <th className="w-[24%] pb-[0.4em] text-end">
+                  {t.lineTotal}
+                  <br />({currency})
+                </th>
+              </tr>
+              <tr>
+                <td colSpan={4} className="p-0">
+                  <ReceiptRule className="mt-0" />
+                </td>
+              </tr>
+            </thead>
+            <tbody>
+              {invoice.items.map((item) => (
+                <tr key={item.id} className="align-top">
+                  <td className="pe-[0.4em] pb-[0.3em]">
                     {Number(item.quantity)}
-                  </span>
-                </td>
-                <td className="px-3 py-2 border-2 border-gray-400">
-                  <span className="block truncate">{item.name}</span>
-                </td>
-                <td className="px-3 py-2 border-2 border-gray-400">
-                  <span className="block truncate">
+                  </td>
+                  <td className="pe-[0.4em] pb-[0.3em] break-words">
+                    {item.name}
+                  </td>
+                  <td className="pe-[0.4em] pb-[0.3em] text-end whitespace-nowrap">
                     {formatCurrency(Number(item.unitPrice), lang, true)}
-                  </span>
-                </td>
-                <td className="px-3 py-2 border-2 border-gray-400">
-                  <span className="block truncate">
+                  </td>
+                  <td className="pb-[0.3em] text-end whitespace-nowrap">
                     {formatCurrency(
                       Number(item.unitPrice) * Number(item.quantity),
                       lang,
                       true,
                     )}
-                  </span>
-                </td>
-              </tr>
-            ))}
-            <tr>
-              <td colSpan={4} className="border-none p-0 pt-5 print:pt-3">
-                <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-t-2 border-gray-400 pt-3 text-sm font-semibold text-foreground print:pt-2 print:text-xs">
-                  <p>
-                    {t.itemsCount}:{" "}
-                    <span className="font-bold">{itemsCount}</span>
-                  </p>
-                  <p>
-                    {t.totalWeight}:{" "}
-                    <span className="font-bold" dir="ltr">
-                      {totalWeight.toFixed(2)} kg
-                    </span>
-                  </p>
-                </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-                <InvoicePrintTotals
-                  lang={lang}
-                  labels={{
-                    total: t.total,
-                    previousPayment: t.previousPayment,
-                    previousDebts: t.previousDebts,
-                    oldAccountPrompt: t.oldAccountPrompt,
-                    includeOldAccount: t.includeOldAccount,
-                    excludeOldAccount: t.excludeOldAccount,
-                    selectInvoicesTitle: t.selectInvoicesTitle,
-                    selectAllInvoices: t.selectAllInvoices,
-                    invoiceTotal: t.invoiceTotal,
-                    totalPaid: t.totalPaid,
-                    remaining: t.remaining,
-                    done: t.done,
-                    grandTotal: t.grandTotal,
-                  }}
-                  itemsTotal={itemsTotal}
-                  previousPayment={previousPayment}
-                  showPreviousPayment={isPartiallyPaid}
-                  otherOutstandingInvoices={otherOutstandingInvoices}
-                />
+          <ReceiptRule />
 
-                {invoice.notes && (
-                  <p className="mt-4 text-sm font-semibold text-foreground print:text-xs">
-                    {invoice.notes}
-                  </p>
-                )}
+          <p>
+            {t.itemsCount}: {itemsCount}
+          </p>
+          <p>
+            {t.totalWeight}: <span dir="ltr">{totalWeight.toFixed(2)} kg</span>
+          </p>
 
-                <p className="mt-4 text-center text-sm font-semibold text-foreground print:text-xs">
-                  {t.thankYou}
-                </p>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+          <InvoicePrintTotals
+            lang={lang}
+            controlsSlotId={PRINT_CONTROLS_SLOT_ID}
+            labels={{
+              total: t.total,
+              previousPayment: t.previousPayment,
+              previousDebts: t.previousDebts,
+              oldAccountPrompt: t.oldAccountPrompt,
+              includeOldAccount: t.includeOldAccount,
+              excludeOldAccount: t.excludeOldAccount,
+              selectInvoicesTitle: t.selectInvoicesTitle,
+              selectAllInvoices: t.selectAllInvoices,
+              invoiceTotal: t.invoiceTotal,
+              totalPaid: t.totalPaid,
+              remaining: t.remaining,
+              done: t.done,
+              grandTotal: t.grandTotal,
+            }}
+            itemsTotal={itemsTotal}
+            previousPayment={previousPayment}
+            showPreviousPayment={isPartiallyPaid}
+            otherOutstandingInvoices={otherOutstandingInvoices}
+          />
+
+          {invoice.notes && <p className="mt-[0.6em]">{invoice.notes}</p>}
+
+          <ReceiptThankYou>{t.thankYou}</ReceiptThankYou>
+        </ReceiptPaper>
       </div>
     </div>
   );

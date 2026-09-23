@@ -148,6 +148,7 @@ model SystemSettings {
   logoPublicId       String?
   colorsLight        Json?
   colorsDark         Json?
+  receiptPaperSize   String           @default("58mm")
   businessTypeId     String?
   activeBusinessType BusinessTypeDef? @relation(fields: [businessTypeId], references: [id], onDelete: SetNull)
   updatedAt          DateTime         @updatedAt

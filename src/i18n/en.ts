@@ -727,6 +727,7 @@ export const en = {
       paidTotal: "Paid",
       remainingTotal: "Remaining",
       fileName: "waiter-invoice",
+      thankYou: "Thank you for your business!",
     },
     photo: {
       title: "Waiter photo",
@@ -1593,6 +1594,19 @@ export const en = {
   },
   settings: {
     validationError: "Please check the entered data",
+    printing: {
+      title: "Printing",
+      description:
+        "Default paper size for printed invoices and daily waiter invoices. You can still switch it on the print page.",
+      paperLabel: "Paper size",
+      toastUpdated: "Printing settings saved",
+      options: {
+        "58mm": "58mm thermal",
+        "80mm": "80mm thermal",
+        A5: "A5",
+        A4: "A4",
+      },
+    },
     brandingTitle: "Company / Branding",
     logo: {
       title: "Company logo",

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { Check, X, ListChecks } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,8 +13,11 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/currency";
+import { ReceiptLine, ReceiptRule } from "@/components/shared/receipt-parts";
 import { PaymentStatusBadge } from "@/features/invoices/components/payment-status-badge";
 import type { PaymentStatus } from "@/generated/prisma/client";
+
+const noopSubscribe = () => () => {};
 
 export type OtherOutstandingInvoiceItem = {
   id: string;
@@ -42,9 +46,14 @@ export type OtherOutstandingInvoice = {
  * (same pattern as the "تسجيل دفعة" dialog) so the admin can include only
  * specific old invoices instead of all-or-nothing; everything is selected
  * by default.
+ *
+ * The totals lines render inline in the receipt; the on-screen controls are
+ * portaled into `controlsSlotId` (outside the receipt) so they never land in
+ * the printout or the PDF snapshot.
  */
 export function InvoicePrintTotals({
   lang,
+  controlsSlotId,
   labels,
   itemsTotal,
   previousPayment,
@@ -52,6 +61,7 @@ export function InvoicePrintTotals({
   otherOutstandingInvoices,
 }: {
   lang: "ar" | "en" | "fr";
+  controlsSlotId: string;
   labels: {
     total: string;
     previousPayment: string;
@@ -76,6 +86,12 @@ export function InvoicePrintTotals({
     () => new Set(otherOutstandingInvoices.map((invoice) => invoice.id)),
   );
   const [dialogOpen, setDialogOpen] = useState(false);
+  // Server render / hydration: null (no portal); client: the slot element.
+  const controlsSlot = useSyncExternalStore(
+    noopSubscribe,
+    () => document.getElementById(controlsSlotId),
+    () => null,
+  );
 
   const hasOldAccount = otherOutstandingInvoices.length > 0;
   const previousDebtsTotal = otherOutstandingInvoices.reduce(
@@ -107,10 +123,10 @@ export function InvoicePrintTotals({
     );
   }
 
-  return (
+  const controls = (
     <>
       {hasOldAccount && (
-        <div className="mt-3 space-y-2 rounded-lg border border-dashed border-amber-500/40 bg-amber-500/5 p-3 print:hidden">
+        <div className="space-y-2 rounded-lg border border-dashed border-amber-500/40 bg-amber-500/5 p-3 print:hidden">
           <p className="text-xs font-medium text-foreground">
             {labels.oldAccountPrompt}{" "}
             <span className="font-bold" dir="ltr">
@@ -266,30 +282,38 @@ export function InvoicePrintTotals({
         </DialogContent>
       </Dialog>
 
-      <div className="mt-2 flex flex-col gap-1 text-sm font-semibold text-foreground print:text-xs">
-        <p>
-          {labels.total}: {formatCurrency(itemsTotal, lang, false)}
-        </p>
-        {showPreviousPayment && (
-          <p>
-            {labels.previousPayment}:{" "}
-            {formatCurrency(previousPayment, lang, false)}
-          </p>
-        )}
-        {includesOldAccount && hasOldAccount && (
-          <p>
-            {labels.previousDebts}:{" "}
-            {formatCurrency(selectedDebtsTotal, lang, false)}
-          </p>
-        )}
-      </div>
+    </>
+  );
 
-      <div className="mt-3 flex items-center justify-between rounded-md border-2 border-gray-400 bg-gray-100 px-4 py-2 print:mt-2 print:py-1.5 print:[print-color-adjust:exact] print:[-webkit-print-color-adjust:exact]">
-        <p className="text-base font-bold print:text-sm">{labels.grandTotal}</p>
-        <p className="text-lg font-bold print:text-base">
-          {formatCurrency(grandTotal, lang, false)}
-        </p>
-      </div>
+  return (
+    <>
+      {controlsSlot && createPortal(controls, controlsSlot)}
+
+      <ReceiptLine
+        className="mt-[0.3em]"
+        label={`${labels.total}:`}
+        value={formatCurrency(itemsTotal, lang, false)}
+      />
+      {showPreviousPayment && (
+        <ReceiptLine
+          label={`${labels.previousPayment}:`}
+          value={formatCurrency(previousPayment, lang, false)}
+        />
+      )}
+      {includesOldAccount && hasOldAccount && (
+        <ReceiptLine
+          label={`${labels.previousDebts}:`}
+          value={formatCurrency(selectedDebtsTotal, lang, false)}
+        />
+      )}
+
+      <ReceiptRule />
+      <ReceiptLine
+        className="text-[1.5em] leading-tight font-bold"
+        label={<span className="whitespace-nowrap">{labels.grandTotal}</span>}
+        value={formatCurrency(grandTotal, lang, false)}
+      />
+      <ReceiptRule />
     </>
   );
 }

@@ -175,6 +175,10 @@ export function OptionPickerDialog({
     onOpenChange(false);
   }
 
+  // Products without options reuse this dialog purely as a quantity picker:
+  // no per-unit header and no "add another" (every unit would be identical).
+  const hasOptions = groups.length > 0;
+
   const grandTotal = units.reduce(
     (sum, unit) =>
       sum + (basePrice + unitAdjustment(groups, unit)) * unit.quantity,
@@ -199,23 +203,25 @@ export function OptionPickerDialog({
             const lineTotal = (basePrice + adjustment) * unit.quantity;
             return (
               <div key={unit.id} className="space-y-4 rounded-xl border p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">
-                    {t.productOptions.unitLabel} {index + 1}
-                  </span>
-                  {units.length > 1 && (
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="ghost"
-                      className="cursor-pointer text-muted-foreground hover:text-destructive"
-                      aria-label={t.productOptions.removeUnitLabel}
-                      onClick={() => removeUnit(unit.id)}
-                    >
-                      <X className="size-4" />
-                    </Button>
-                  )}
-                </div>
+                {hasOptions && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold">
+                      {t.productOptions.unitLabel} {index + 1}
+                    </span>
+                    {units.length > 1 && (
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="ghost"
+                        className="cursor-pointer text-muted-foreground hover:text-destructive"
+                        aria-label={t.productOptions.removeUnitLabel}
+                        onClick={() => removeUnit(unit.id)}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
 
                 {groups.map((group) => (
                   <div key={group.id} className="space-y-2">
@@ -324,15 +330,17 @@ export function OptionPickerDialog({
             );
           })}
 
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full cursor-pointer gap-1.5"
-            onClick={addUnit}
-          >
-            <Plus className="size-4" />
-            {t.productOptions.addAnotherButton}
-          </Button>
+          {hasOptions && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full cursor-pointer gap-1.5"
+              onClick={addUnit}
+            >
+              <Plus className="size-4" />
+              {t.productOptions.addAnotherButton}
+            </Button>
+          )}
 
           <Button
             className="w-full cursor-pointer hover:scale-101"

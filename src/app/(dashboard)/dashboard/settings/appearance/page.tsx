@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { getSystemSettings } from "@/features/settings/queries";
 import { AppearanceForm } from "@/features/settings/components/appearance-form";
 import { CompanyLogoForm } from "@/features/settings/components/company-logo-form";
+import { ReceiptPaperForm } from "@/features/settings/components/receipt-paper-form";
 import { requirePageAccess } from "@/lib/permissions";
 import { getDictionary } from "@/i18n/server";
 
@@ -23,6 +24,14 @@ export default async function AppearancePage() {
         </CardHeader>
         <CardContent>
           <CompanyLogoForm logoUrl={settings.logoUrl} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t.settings.printing.title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ReceiptPaperForm paper={settings.receiptPaperSize} />
         </CardContent>
       </Card>
       <Card>

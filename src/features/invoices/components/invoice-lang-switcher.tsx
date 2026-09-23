@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Check, ChevronDown, Globe } from "lucide-react";
 import {
   DropdownMenu,
@@ -37,6 +37,14 @@ function LangBadge({ active, code }: { active?: boolean; code: string }) {
 export function InvoiceLangSwitcher({ lang }: { lang: Lang }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  function select(option: Lang) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("lang", option);
+    params.delete("auto");
+    router.push(`${pathname}?${params.toString()}`);
+  }
 
   return (
     <DropdownMenu>
@@ -55,7 +63,7 @@ export function InvoiceLangSwitcher({ lang }: { lang: Lang }) {
           return (
             <DropdownMenuItem
               key={option}
-              onClick={() => router.push(`${pathname}?lang=${option}`)}
+              onClick={() => select(option)}
               className={cn(
                 "gap-2.5 rounded-md py-2 cursor-pointer",
                 isActive && "bg-accent text-accent-foreground",

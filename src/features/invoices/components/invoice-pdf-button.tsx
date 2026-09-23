@@ -5,12 +5,17 @@ import { FileDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n/locale-provider";
+import {
+  RECEIPT_PAPER_SPECS,
+  type ReceiptPaperSize,
+} from "@/lib/receipt-paper";
 
 export function InvoicePdfButton({
   targetId,
   fileName,
   label,
   autoOpen = false,
+  paper,
 }: {
   targetId: string;
   fileName: string;
@@ -18,6 +23,11 @@ export function InvoicePdfButton({
   /** When true, generate the PDF once shortly after mount — used when the
    * page is opened with `?auto=pdf` (from the La Caisse success dialog). */
   autoOpen?: boolean;
+  /** Receipt paper the target is laid out for. The target already carries
+   * its own padding, so the PDF page is the paper itself with no margin; a
+   * thermal roll gets a page exactly as long as the receipt. Omitted →
+   * the legacy A5 layout with a 6mm margin. */
+  paper?: ReceiptPaperSize;
 }) {
   const t = useT();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -41,29 +51,41 @@ export function InvoicePdfButton({
       });
 
       const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a5",
-      });
-
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 6;
-      const maxWidth = pageWidth - margin * 2;
-      const maxHeight = pageHeight - margin * 2;
-
       const canvasRatio = canvas.width / canvas.height;
-      let imgWidth = maxWidth;
-      let imgHeight = imgWidth / canvasRatio;
-      if (imgHeight > maxHeight) {
-        imgHeight = maxHeight;
-        imgWidth = imgHeight * canvasRatio;
-      }
+      const spec = paper ? RECEIPT_PAPER_SPECS[paper] : null;
 
-      const x = (pageWidth - imgWidth) / 2;
-      const y = margin;
-      pdf.addImage(imgData, "PNG", x, y, imgWidth, imgHeight);
+      let pdf: InstanceType<typeof jsPDF>;
+      if (spec && spec.heightMm === null) {
+        const height = spec.widthMm / canvasRatio;
+        pdf = new jsPDF({
+          orientation: height >= spec.widthMm ? "portrait" : "landscape",
+          unit: "mm",
+          format: [spec.widthMm, height],
+        });
+        pdf.addImage(imgData, "PNG", 0, 0, spec.widthMm, height);
+      } else {
+        pdf = new jsPDF({
+          orientation: "portrait",
+          unit: "mm",
+          format: spec ? [spec.widthMm, spec.heightMm!] : "a5",
+        });
+
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = spec ? 0 : 6;
+        const maxWidth = pageWidth - margin * 2;
+        const maxHeight = pageHeight - margin * 2;
+
+        let imgWidth = maxWidth;
+        let imgHeight = imgWidth / canvasRatio;
+        if (imgHeight > maxHeight) {
+          imgHeight = maxHeight;
+          imgWidth = imgHeight * canvasRatio;
+        }
+
+        const x = (pageWidth - imgWidth) / 2;
+        pdf.addImage(imgData, "PNG", x, margin, imgWidth, imgHeight);
+      }
       pdf.setProperties({ title: fileName });
 
       const blobUrl = pdf.output("bloburl");

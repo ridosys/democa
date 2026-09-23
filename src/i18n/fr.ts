@@ -743,6 +743,7 @@ export const fr = {
       paidTotal: "Payé",
       remainingTotal: "Reste",
       fileName: "facture-serveur",
+      thankYou: "Merci pour votre confiance !",
     },
     photo: {
       title: "Photo du serveur",
@@ -1634,6 +1635,19 @@ export const fr = {
   },
   settings: {
     validationError: "Veuillez vérifier les données saisies",
+    printing: {
+      title: "Impression",
+      description:
+        "Format de papier par défaut des factures et des factures journalières des serveurs. Vous pouvez toujours le changer sur la page d'impression.",
+      paperLabel: "Format du papier",
+      toastUpdated: "Paramètres d'impression enregistrés",
+      options: {
+        "58mm": "Thermique 58mm",
+        "80mm": "Thermique 80mm",
+        A5: "A5",
+        A4: "A4",
+      },
+    },
     brandingTitle: "Entreprise / Identité visuelle",
     logo: {
       title: "Logo de l'entreprise",

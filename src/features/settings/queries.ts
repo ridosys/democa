@@ -3,6 +3,10 @@ import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { companyConfig } from "@/config/company";
 import type { ColorTokens } from "./schema";
+import {
+  resolveReceiptPaper,
+  type ReceiptPaperSize,
+} from "@/lib/receipt-paper";
 
 export type SystemSettingsData = {
   appName: string;
@@ -11,6 +15,8 @@ export type SystemSettingsData = {
   logoUrl: string | null;
   colorsLight: ColorTokens;
   colorsDark: ColorTokens;
+  /** Default paper printed invoices are laid out for (58mm, 80mm, A5, A4). */
+  receiptPaperSize: ReceiptPaperSize;
 };
 
 function mergeColors(base: ColorTokens, override: unknown): ColorTokens {
@@ -27,6 +33,7 @@ export const getSystemSettings = cache(
       logoUrl: row?.logoUrl || companyConfig.logo,
       colorsLight: mergeColors(companyConfig.colors.light, row?.colorsLight),
       colorsDark: mergeColors(companyConfig.colors.dark, row?.colorsDark),
+      receiptPaperSize: resolveReceiptPaper(undefined, row?.receiptPaperSize),
     };
   },
 );

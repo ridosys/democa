@@ -18,12 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -49,6 +43,7 @@ import {
   type SelectedOption,
 } from "@/features/tables/actions";
 import { getOrCreateInvoiceForOrder } from "@/features/invoices/actions";
+import { printInvoiceReceipt } from "@/features/invoices/print-receipt";
 import {
   fetchProductOptionGroupsAction,
 } from "@/features/product-options/actions";
@@ -135,7 +130,9 @@ export function OpenOrderWorkspace({
   const [items, setItems] = useState<OpenOrderCartLine[]>(initialItems);
   const [categoryId, setCategoryId] = useState("ALL");
   const [categoryName, setCategoryName] = useState(t.pos.allCategories);
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [method, setMethod] = useState<PaymentMethod>("CASH");
+  // null = follow the order total; set once the cashier types an amount.
+  const [paidInput, setPaidInput] = useState<string | null>(null);
   const [optionPicker, setOptionPicker] = useState<{
     product: PosProduct;
     groups: ProductOptionGroupsView;
@@ -243,7 +240,18 @@ export function OpenOrderWorkspace({
     });
   }
 
+  /** Tile tap: always opens the picker dialog — quantity only for plain
+   * products, options + quantity for products that have option groups. */
   function handleAddProduct(product: PosProduct) {
+    startTransition(async () => {
+      const groups = await fetchProductOptionGroupsAction(product.id);
+      setOptionPicker({ product, groups });
+    });
+  }
+
+  /** Tile "+" button: adds one unit straight away unless the product needs
+   * options chosen first. */
+  function handleIncrementProduct(product: PosProduct) {
     startTransition(async () => {
       const groups = await fetchProductOptionGroupsAction(product.id);
       if (groups.length > 0) {
@@ -251,6 +259,27 @@ export function OpenOrderWorkspace({
         return;
       }
       addWithOptions(product, undefined);
+    });
+  }
+
+  const paidValue = paidInput ?? (total > 0 ? String(Math.round(total * 100) / 100) : "");
+
+  function handleCheckout() {
+    if (!orderId) return;
+    const checkoutOrderId = orderId;
+    startTransition(async () => {
+      const result = await getOrCreateInvoiceForOrder(checkoutOrderId, {
+        language: langFromLocale(locale),
+        payments: [{ method, amount: Number(paidValue) || 0 }],
+        redirect: false,
+      });
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(t.tables.caisse.checkoutSuccessToast);
+      if (result.invoiceId) printInvoiceReceipt(result.invoiceId);
+      router.push("/caisse/cafe");
     });
   }
 
@@ -298,7 +327,7 @@ export function OpenOrderWorkspace({
       categoryName={categoryName}
       cartQuantities={cartQuantities}
       onAddProduct={handleAddProduct}
-      onIncrement={handleAddProduct}
+      onIncrement={handleIncrementProduct}
       onDecrement={handleDecrementProduct}
       showStock={false}
     />
@@ -371,12 +400,56 @@ export function OpenOrderWorkspace({
           <span>{t.tables.caisse.totalLabel}</span>
           <span>{formatCurrency(total, locale)}</span>
         </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t.tables.caisse.paymentMethodLabel}</Label>
+            <Select
+              value={method}
+              onValueChange={(value) => value && setMethod(value as PaymentMethod)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  {(value: string) =>
+                    t.statusLabels.paymentMethod[
+                      value as keyof typeof t.statusLabels.paymentMethod
+                    ] ?? value
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {PAYMENT_METHODS.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {t.statusLabels.paymentMethod[value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="checkout-amount" className="text-xs">
+              {t.tables.caisse.amountLabel}
+            </Label>
+            <Input
+              id="checkout-amount"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="0.01"
+              value={paidValue}
+              onChange={(e) => setPaidInput(e.target.value)}
+            />
+          </div>
+        </div>
         <Button
           className="w-full cursor-pointer"
           disabled={!orderId || items.length === 0 || isPending}
-          onClick={() => setCheckoutOpen(true)}
+          onClick={handleCheckout}
         >
-          <Wallet className="size-4" />
+          {isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Wallet className="size-4" />
+          )}
           {t.tables.caisse.checkoutButton}
         </Button>
       </div>
@@ -454,20 +527,6 @@ export function OpenOrderWorkspace({
         </div>
       )}
 
-      {orderId && (
-        <CheckoutDialog
-          open={checkoutOpen}
-          onOpenChange={setCheckoutOpen}
-          orderId={orderId}
-          total={total}
-          language={langFromLocale(locale)}
-          onSuccess={(invoiceId) => {
-            toast.success(t.tables.caisse.checkoutSuccessToast);
-            router.push(`/caisse/invoices/${invoiceId}/print`);
-          }}
-        />
-      )}
-
       {optionPicker && (
         <OptionPickerDialog
           open={Boolean(optionPicker)}
@@ -484,93 +543,5 @@ export function OpenOrderWorkspace({
         />
       )}
     </div>
-  );
-}
-
-function CheckoutDialog({
-  open,
-  onOpenChange,
-  orderId,
-  total,
-  language,
-  onSuccess,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  orderId: string;
-  total: number;
-  language: InvoiceLanguage;
-  onSuccess: (invoiceId: string) => void;
-}) {
-  const { t } = useLocale();
-  const [isPending, startTransition] = useTransition();
-  const [method, setMethod] = useState<PaymentMethod>("CASH");
-  const [amount, setAmount] = useState(String(total));
-
-  function handleConfirm() {
-    startTransition(async () => {
-      const result = await getOrCreateInvoiceForOrder(orderId, {
-        language,
-        payments: [{ method, amount: Number(amount) || 0 }],
-        redirect: false,
-      });
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      onOpenChange(false);
-      if (result.invoiceId) onSuccess(result.invoiceId);
-    });
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t.tables.caisse.checkoutTitle}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>{t.tables.caisse.paymentMethodLabel}</Label>
-            <Select value={method} onValueChange={(value) => value && setMethod(value as PaymentMethod)}>
-              <SelectTrigger className="w-full">
-                <SelectValue>
-                  {(value: string) =>
-                    t.statusLabels.paymentMethod[value as keyof typeof t.statusLabels.paymentMethod] ??
-                    value
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_METHODS.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {t.statusLabels.paymentMethod[value]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="checkout-amount">{t.tables.caisse.amountLabel}</Label>
-            <Input
-              id="checkout-amount"
-              type="number"
-              min={0}
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </div>
-          <Button
-            className="w-full cursor-pointer"
-            disabled={isPending}
-            onClick={handleConfirm}
-          >
-            {isPending && <Loader2 className="size-4 animate-spin" />}
-            {t.tables.caisse.confirmPayButton}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }

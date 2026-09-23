@@ -714,6 +714,7 @@ export const ar = {
       paidTotal: "المدفوع",
       remainingTotal: "المتبقي",
       fileName: "فاتورة-النادل",
+      thankYou: "شكراً لتعاملكم معنا",
     },
     photo: {
       title: "صورة النادل",
@@ -1554,6 +1555,19 @@ export const ar = {
   },
   settings: {
     validationError: "الرجاء التحقق من البيانات المدخلة",
+    printing: {
+      title: "الطباعة",
+      description:
+        "حجم الورق الافتراضي للفواتير المطبوعة والفواتير اليومية للنادل. يمكنك تغييره أيضاً من صفحة الطباعة.",
+      paperLabel: "حجم الورق",
+      toastUpdated: "تم حفظ إعدادات الطباعة",
+      options: {
+        "58mm": "حراري 58mm",
+        "80mm": "حراري 80mm",
+        A5: "A5",
+        A4: "A4",
+      },
+    },
     brandingTitle: "الشركة / الهوية البصرية",
     logo: {
       title: "شعار الشركة",

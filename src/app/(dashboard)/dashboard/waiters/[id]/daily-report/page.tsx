@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ReceiptText } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/shared/back-button";
-import { DocumentLogo } from "@/components/shared/document-logo";
+import { ReceiptPaper } from "@/components/shared/receipt-paper";
+import { ReceiptPaperSwitcher } from "@/components/shared/receipt-paper-switcher";
+import {
+  ReceiptBrand,
+  ReceiptRule,
+  ReceiptThankYou,
+} from "@/components/shared/receipt-parts";
 import { InvoicePrintButton } from "@/features/invoices/components/invoice-print-button";
 import { InvoicePdfButton } from "@/features/invoices/components/invoice-pdf-button";
 import { getWaiterDailyReport } from "@/features/waiters/queries";
@@ -12,6 +16,8 @@ import { formatCurrency } from "@/lib/currency";
 import { formatDate, parseDateInputValue, toDateInputValue } from "@/lib/date";
 import { requirePageAccess } from "@/lib/permissions";
 import { requireFeature } from "@/lib/features";
+import { isThermalPaper, resolveReceiptPaper } from "@/lib/receipt-paper";
+import { cn } from "@/lib/utils";
 import { getDictionary, getLocale } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +31,7 @@ export default async function WaiterDailyReportPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; paper?: string }>;
 }) {
   await requirePageAccess("ORDERS_VIEW");
   await requireFeature("WAITERS");
@@ -62,174 +68,188 @@ export default async function WaiterDailyReportPage({
   );
   const remainingTotal = Math.max(0, grandTotal - paidTotal);
 
+  const paper = resolveReceiptPaper(requested.paper, settings.receiptPaperSize);
+  // Thermal rolls can't fit five columns side by side — each order goes on
+  // two lines and the stat boxes wrap 2×2.
+  const narrow = isThermalPaper(paper);
+  const dir = locale === "ar" ? "rtl" : "ltr";
+  const orderType = (invoice: (typeof report.invoices)[number]) =>
+    `${typeLabel(invoice.type)}${invoice.tableName ? `-${invoice.tableName}` : ""}`;
+  const stats = [
+    { label: labels.ordersCount, value: String(report.invoices.length) },
+    { label: labels.grandTotal, value: formatCurrency(grandTotal, locale) },
+    { label: labels.paidTotal, value: formatCurrency(paidTotal, locale) },
+    { label: labels.remainingTotal, value: formatCurrency(remainingTotal, locale) },
+  ];
+
   return (
-    <div className="mx-auto max-w-4xl space-y-5 p-4 sm:p-6 print:max-w-none print:p-0">
-      <style>{`
-        @page { size: A5 portrait; margin: 8mm; }
-        @media print {
-          html, body { background: white !important; }
-          #waiter-daily-report { width: 100%; min-height: 0; }
-          #waiter-daily-report table { font-size: 10px; }
-          #waiter-daily-report a { color: inherit !important; text-decoration: none !important; }
-        }
-      `}</style>
-      <div className="flex items-center justify-between gap-2 print:hidden">
+    <div className="space-y-5 p-0 sm:p-2 print:p-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
         <BackButton fallbackHref={`/dashboard/waiters/${id}`} />
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <ReceiptPaperSwitcher paper={paper} />
           <InvoicePdfButton
             targetId="waiter-daily-report"
             fileName={`${labels.fileName}-${report.waiter.name}-${date}.pdf`}
             label={t.common.openPdf}
+            paper={paper}
           />
           <InvoicePrintButton label={t.common.printSavePdf} />
         </div>
       </div>
 
-      <section
-        id="waiter-daily-report"
-        className="rounded-2xl border bg-card p-5 shadow-sm sm:p-8 print:rounded-none print:border-0 print:p-0 print:shadow-none print:[print-color-adjust:exact] print:[-webkit-print-color-adjust:exact]"
-      >
-        <header className="flex flex-col justify-between gap-5 border-b pb-5 sm:flex-row">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <ReceiptText className="size-6 text-primary print:hidden" />
-              <h1 className="text-2xl font-bold">{labels.documentTitle}</h1>
-            </div>
-            <DocumentLogo
-              logoUrl={settings.logoUrl}
-              name={settings.appName}
-              nameClassName="font-semibold"
-              imgClassName="h-10 w-auto max-w-[180px] object-contain"
-            />
-          </div>
-          <div className="space-y-1 text-sm sm:text-end">
-            <p>
-              <span className="text-muted-foreground">{labels.waiterLabel}: </span>
-              <strong>{report.waiter.name}</strong>
-            </p>
-            {report.waiter.phone && (
-              <p dir="ltr" className="sm:ms-auto">
-                {report.waiter.phone}
-              </p>
-            )}
-            <p>
-              <span className="text-muted-foreground">{labels.dateHeading}: </span>
-              <span dir="ltr">{formatDate(day)}</span>
-            </p>
-          </div>
-        </header>
+      <div className="overflow-x-auto pb-2 print:overflow-visible print:pb-0">
+        <ReceiptPaper id="waiter-daily-report" paper={paper} dir={dir}>
+          <ReceiptBrand logoUrl={settings.logoUrl} name={settings.appName} />
 
-        <h2 className="mt-6 mb-2 font-semibold print:mt-4">{labels.ordersSection}</h2>
-        <div className="overflow-hidden rounded-xl border print:rounded-none">
-          <table className="w-full border-collapse text-sm">
-            <thead className="bg-muted/60">
-              <tr>
-                <th className="px-4 py-3 text-start print:py-2">{labels.invoiceColumn}</th>
-                <th className="px-4 py-3 text-start print:py-2">{labels.timeColumn}</th>
-                <th className="px-4 py-3 text-start print:py-2">{labels.typeColumn}</th>
-                <th className="px-4 py-3 text-start print:py-2">{labels.totalColumn}</th>
-                <th className="px-4 py-3 text-end print:py-2">{labels.statusColumn}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.invoices.length === 0 ? (
+          <h1 className="mt-[0.3em] text-center text-[1.9em] leading-tight font-bold">
+            {labels.documentTitle}
+          </h1>
+
+          <div className="mt-[0.5em] flex flex-wrap items-baseline justify-between gap-x-[1em] text-[1.1em]">
+            <p>
+              {labels.waiterLabel}: <span className="font-bold">{report.waiter.name}</span>
+            </p>
+            <p>
+              {labels.dateHeading}: <span dir="ltr">{formatDate(day)}</span>
+            </p>
+          </div>
+
+          <ReceiptRule />
+
+          <h2 className="mb-[0.4em] text-[1.3em] font-bold">{labels.ordersSection}</h2>
+          {report.invoices.length === 0 ? (
+            <p className="py-[1em] text-center">{labels.noOrders}</p>
+          ) : narrow ? (
+            <div className="space-y-[0.5em]">
+              {report.invoices.map((invoice) => (
+                <div key={invoice.id}>
+                  <div className="flex items-baseline justify-between gap-[0.6em]">
+                    <Link
+                      href={`/dashboard/invoices/${invoice.id}`}
+                      className="min-w-0 break-all"
+                      dir="ltr"
+                    >
+                      {invoice.invoiceNumber}
+                    </Link>
+                    <span className="shrink-0 font-bold whitespace-nowrap">
+                      {formatCurrency(invoice.total, locale)}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-[0.6em]">
+                    <span>
+                      <span dir="ltr">{formatTime(invoice.createdAt)}</span> ·{" "}
+                      {orderType(invoice)}
+                    </span>
+                    <span className="shrink-0 text-end">
+                      {t.statusLabels.paymentStatus[invoice.paymentStatus]}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <table className="w-full border-collapse text-[0.9em]">
+              <thead>
+                <tr className="font-bold">
+                  <th className="pe-[0.6em] pb-[0.3em] text-start">{labels.invoiceColumn}</th>
+                  <th className="pe-[0.6em] pb-[0.3em] text-start">{labels.timeColumn}</th>
+                  <th className="pe-[0.6em] pb-[0.3em] text-start">{labels.typeColumn}</th>
+                  <th className="pe-[0.6em] pb-[0.3em] text-end">{labels.totalColumn}</th>
+                  <th className="pb-[0.3em] text-end">{labels.statusColumn}</th>
+                </tr>
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
-                    {labels.noOrders}
+                  <td colSpan={5} className="p-0">
+                    <ReceiptRule className="mt-0" />
                   </td>
                 </tr>
-              ) : (
-                report.invoices.map((invoice) => (
-                  <tr key={invoice.id} className="border-t">
-                    <td className="px-4 py-3 font-medium print:py-2" dir="ltr">
-                      <Link
-                        href={`/dashboard/invoices/${invoice.id}`}
-                        className="hover:text-primary hover:underline print:text-foreground print:no-underline"
-                      >
+              </thead>
+              <tbody>
+                {report.invoices.map((invoice) => (
+                  <tr key={invoice.id} className="align-top">
+                    <td className="pe-[0.6em] pb-[0.5em] break-all" dir="ltr">
+                      <Link href={`/dashboard/invoices/${invoice.id}`}>
                         {invoice.invoiceNumber}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 print:py-2" dir="ltr">
+                    <td className="pe-[0.6em] pb-[0.5em]" dir="ltr">
                       {formatTime(invoice.createdAt)}
                     </td>
-                    <td className="px-4 py-3 print:py-2">
-                      {typeLabel(invoice.type)}
-                      {invoice.tableName ? ` · ${invoice.tableName}` : ""}
-                    </td>
-                    <td className="px-4 py-3 font-medium print:py-2">
+                    <td className="pe-[0.6em] pb-[0.5em]">{orderType(invoice)}</td>
+                    <td className="pe-[0.6em] pb-[0.5em] text-end whitespace-nowrap">
                       {formatCurrency(invoice.total, locale)}
                     </td>
-                    <td className="px-4 py-3 text-end print:py-2">
-                      <Badge
-                        variant={
-                          invoice.paymentStatus === "PAID"
-                            ? "default"
-                            : invoice.paymentStatus === "PARTIALLY_PAID"
-                              ? "secondary"
-                              : "destructive"
-                        }
-                      >
-                        {t.statusLabels.paymentStatus[invoice.paymentStatus]}
-                      </Badge>
+                    <td className="pb-[0.5em] text-end">
+                      {t.statusLabels.paymentStatus[invoice.paymentStatus]}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          )}
 
-        {report.products.length > 0 && (
-          <>
-            <h2 className="mt-6 mb-2 font-semibold print:mt-4">{labels.productsSection}</h2>
-            <div className="overflow-hidden rounded-xl border print:rounded-none">
-              <table className="w-full border-collapse text-sm">
-                <thead className="bg-muted/60">
+          {report.products.length > 0 && (
+            <>
+              <ReceiptRule />
+              <h2 className="mb-[0.4em] text-[1.3em] font-bold">{labels.productsSection}</h2>
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="font-bold">
+                    <th className="pe-[0.6em] pb-[0.3em] text-start">{labels.productColumn}</th>
+                    <th className="w-[18%] pe-[0.6em] pb-[0.3em] text-center">
+                      {labels.quantityColumn}
+                    </th>
+                    <th className="w-[32%] pb-[0.3em] text-end">{labels.totalColumn}</th>
+                  </tr>
                   <tr>
-                    <th className="px-4 py-3 text-start print:py-2">{labels.productColumn}</th>
-                    <th className="px-4 py-3 text-start print:py-2">{labels.quantityColumn}</th>
-                    <th className="px-4 py-3 text-end print:py-2">{labels.totalColumn}</th>
+                    <td colSpan={3} className="p-0">
+                      <ReceiptRule className="mt-0" />
+                    </td>
                   </tr>
                 </thead>
                 <tbody>
                   {report.products.map((product) => (
-                    <tr key={product.name} className="border-t">
-                      <td className="px-4 py-3 print:py-2">{product.name}</td>
-                      <td className="px-4 py-3 tabular-nums print:py-2">
+                    <tr key={product.name} className="align-top">
+                      <td className="pe-[0.6em] pb-[0.3em] break-words">{product.name}</td>
+                      <td className="pe-[0.6em] pb-[0.3em] text-center tabular-nums">
                         {Number(product.quantity.toFixed(3))}
                       </td>
-                      <td className="px-4 py-3 text-end font-medium print:py-2">
+                      <td className="pb-[0.3em] text-end whitespace-nowrap">
                         {formatCurrency(product.total, locale)}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-          </>
-        )}
+            </>
+          )}
 
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 print:mt-4 print:grid-cols-4 print:gap-2">
-          <div className="rounded-xl border p-4 text-center print:rounded-lg print:p-2.5">
-            <p className="text-sm text-muted-foreground">{labels.ordersCount}</p>
-            <p className="mt-1 text-lg font-bold">{report.invoices.length}</p>
+          <ReceiptRule />
+
+          <div
+            className={cn(
+              "grid gap-[0.5em]",
+              narrow ? "grid-cols-2" : "grid-cols-4",
+            )}
+          >
+            {stats.map((stat) => (
+              <div
+                key={stat.label}
+                className="rounded-[0.6em] border-[1.5px] border-black px-[0.3em] py-[0.5em] text-center"
+              >
+                <p>{stat.label}</p>
+                <p className="text-[1.25em] leading-tight font-bold whitespace-nowrap">
+                  {stat.value}
+                </p>
+              </div>
+            ))}
           </div>
-          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-center print:rounded-lg print:p-2.5">
-            <p className="text-sm text-muted-foreground">{labels.grandTotal}</p>
-            <p className="mt-1 text-lg font-bold">{formatCurrency(grandTotal, locale)}</p>
-          </div>
-          <div className="rounded-xl border p-4 text-center print:rounded-lg print:p-2.5">
-            <p className="text-sm text-muted-foreground">{labels.paidTotal}</p>
-            <p className="mt-1 text-lg font-bold">{formatCurrency(paidTotal, locale)}</p>
-          </div>
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-center print:rounded-lg print:p-2.5">
-            <p className="text-sm text-muted-foreground">{labels.remainingTotal}</p>
-            <p className="mt-1 text-lg font-bold text-amber-700 dark:text-amber-400">
-              {formatCurrency(remainingTotal, locale)}
-            </p>
-          </div>
-        </div>
-      </section>
+
+          <ReceiptRule className="mt-[0.8em]" />
+
+          <ReceiptThankYou>{labels.thankYou}</ReceiptThankYou>
+        </ReceiptPaper>
+      </div>
     </div>
   );
 }
