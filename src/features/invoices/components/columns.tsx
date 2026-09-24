@@ -37,6 +37,7 @@ export type InvoiceRow = {
 export function getInvoiceColumns(
   t: Dictionary,
   locale: Locale,
+  cafeMode = false,
 ): ColumnDef<InvoiceRow>[] {
   return [
     {
@@ -53,23 +54,39 @@ export function getInvoiceColumns(
       header: t.invoices.columnInvoiceNumber,
       cell: ({ row }) => <span dir="ltr">{row.original.invoiceNumber}</span>,
     },
-    {
-      accessorKey: "customerName",
-      header: t.invoices.columnCustomer,
-      cell: ({ row }) => {
-        const { orderType, waiterName } = row.original;
-        const isCafeOrder = orderType === "DINE_IN" || orderType === "TAKEAWAY";
-        if (isCafeOrder && waiterName) {
-          return (
-            <span className="flex items-center gap-1.5">
-              <Contact className="size-3.5 shrink-0 text-muted-foreground" />
-              {waiterName}
-            </span>
-          );
+    cafeMode
+      ? {
+          // Cafe business: invoices belong to waiters, not customers.
+          id: "waiterName",
+          header: t.invoices.columnWaiter,
+          cell: ({ row }) =>
+            row.original.waiterName ? (
+              <span className="flex items-center gap-1.5">
+                <Contact className="size-3.5 shrink-0 text-muted-foreground" />
+                {row.original.waiterName}
+              </span>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            ),
         }
-        return row.original.customerName;
-      },
-    },
+      : {
+          accessorKey: "customerName",
+          header: t.invoices.columnCustomer,
+          cell: ({ row }) => {
+            const { orderType, waiterName } = row.original;
+            const isCafeOrder =
+              orderType === "DINE_IN" || orderType === "TAKEAWAY";
+            if (isCafeOrder && waiterName) {
+              return (
+                <span className="flex items-center gap-1.5">
+                  <Contact className="size-3.5 shrink-0 text-muted-foreground" />
+                  {waiterName}
+                </span>
+              );
+            }
+            return row.original.customerName;
+          },
+        },
     {
       id: "customerPhone",
       header: t.invoices.columnPhone,
@@ -88,7 +105,9 @@ export function getInvoiceColumns(
     {
       id: "paymentStatus",
       header: t.invoices.paymentStatus,
-      cell: ({ row }) => <PaymentStatusBadge status={row.original.paymentStatus} />,
+      cell: ({ row }) => (
+        <PaymentStatusBadge status={row.original.paymentStatus} />
+      ),
     },
     {
       id: "language",

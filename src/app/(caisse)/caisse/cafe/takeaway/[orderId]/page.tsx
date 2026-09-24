@@ -60,6 +60,7 @@ export default async function CaisseTakeawayPage({
       waiterId={waitersEnabled ? waiterId : null}
       waiterName={waitersEnabled ? waiterName : null}
       changeWaiterHref={waitersEnabled ? `/caisse/cafe/takeaway/${orderId}/waiter` : null}
+      bluetoothPrint={settings.bluetoothPrint}
     />
   );
 }

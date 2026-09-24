@@ -318,6 +318,19 @@ export const ar = {
     cafeAvgInvoice: "متوسط طلب المقهى",
     cafeQrConversion: "نسبة تحويل QR",
   },
+  bluetoothPrint: {
+    button: "طباعة عبر Thermer",
+    linkError: "تعذّر تجهيز الطباعة عبر Thermer، يرجى المحاولة مرة أخرى",
+    disabledError: "الطباعة عبر Thermer معطّلة في الإعدادات",
+    notFoundError: "الفاتورة غير موجودة",
+    notInstalled:
+      "لم يُفتح تطبيق Thermer. تأكد من تثبيت تطبيق Thermer على جهاز الأندرويد هذا",
+    settingLabel: "تطبيق Thermer (أندرويد)",
+    settingDescription:
+      "يضيف زر طباعة Thermer إلى الفواتير ويطبع فواتير المقهى تلقائياً عند الدفع على الطابعة الحرارية المرتبطة بتطبيق Thermer.",
+    toastEnabled: "تم تفعيل الطباعة عبر Thermer",
+    toastDisabled: "تم تعطيل الطباعة عبر Thermer",
+  },
   statusLabels: {
     order: {
       PENDING: "قيد الانتظار",
@@ -629,6 +642,35 @@ export const ar = {
     },
     caisse: {
       backToTables: "العودة إلى الطاولات",
+      orders: {
+        button: "الطلبات",
+        title: "طلبات الكاشير",
+        description: "الطلبات التي تم دفعها في الكاشير. يمكنك إعادة طباعتها أو تعديلها أو حذفها.",
+        dateLabel: "اليوم",
+        empty: "لا توجد طلبات مدفوعة في هذا اليوم",
+        countTemplate: "{count} طلبات",
+        totalTemplate: "المجموع: {total}",
+        waiterLabel: "النادل",
+        paidLabel: "المدفوع",
+        printButton: "طباعة",
+        editButton: "تعديل",
+        deleteButton: "حذف",
+        editConfirmTitle: "تعديل هذا الطلب؟",
+        editConfirmDescription:
+          "سيتم إلغاء فاتورته {invoice} (يُرجع المخزون والدفعات) وإعادة فتح الطلب لتعديله. الدفع مرة أخرى ينشئ فاتورة جديدة.",
+        editConfirmAction: "إعادة الفتح والتعديل",
+        deleteConfirmTitle: "حذف هذا الطلب؟",
+        deleteConfirmDescription:
+          "سيتم حذف الطلب وفاتورته {invoice} وإرجاع المخزون والدفعات. لا يمكن التراجع عن ذلك.",
+        deletedToast: "تم حذف الطلب",
+        loadingMore: "جارٍ تحميل المزيد من الطلبات…",
+        loadMoreError: "تعذر تحميل المزيد من الطلبات، حاول مرة أخرى",
+        retryButton: "إعادة المحاولة",
+        scrollToLoadMore: "مرّر للأسفل لتحميل المزيد",
+        shownTemplate: "عرض {shown} من {count}",
+        tableBusyError:
+          "هذه الطاولة لديها طلب مفتوح بالفعل. ادفعه أو أفرغه قبل تعديل هذا الطلب.",
+      },
       newTakeawayButton: "طلب سفري جديد",
       openTakeawayOrdersTitle: "الطلبات السفرية المفتوحة",
       noOpenTakeawayOrders: "لا توجد طلبات سفرية مفتوحة",
@@ -956,6 +998,7 @@ export const ar = {
     statusFilterLabel: "حالة الدفع",
     allStatuses: "جميع الحالات",
     columnSequenceNumber: "الرقم التسلسلي",
+    columnWaiter: "النادل",
     columnInvoiceNumber: "رقم الفاتورة",
     columnCustomer: "العميل",
     columnPhone: "الهاتف",

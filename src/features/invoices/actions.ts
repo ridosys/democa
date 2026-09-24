@@ -21,6 +21,7 @@ import {
   getDeletePasswordError,
 } from "@/lib/delete-guard";
 import { formatDocumentNumber } from "@/lib/document-number";
+import { requireFeatureForAction } from "@/lib/features";
 import { getDictionary } from "@/i18n/server";
 import { formatMessage } from "@/i18n/format";
 import {
@@ -750,6 +751,139 @@ export async function deletePosSale(invoiceId: string): Promise<ActionResult> {
     revalidatePath(`/dashboard/customers/${existing.customerId}`);
   }
   return { success: true };
+}
+
+/** Loads a checked-out Cafe Caisse order (dine-in / takeaway) with its
+ * invoice, for the caisse orders screen's edit / delete actions. */
+async function loadCheckedOutCafeOrder(orderId: string) {
+  return prisma.order.findFirst({
+    where: { id: orderId, type: { in: ["DINE_IN", "TAKEAWAY"] } },
+    include: {
+      invoice: { include: { _count: { select: { returns: true } } } },
+    },
+  });
+}
+
+function revalidateCafeOrderPaths(customerId: string | null) {
+  revalidatePath("/caisse/cafe");
+  revalidatePath("/dashboard/invoices");
+  revalidatePath("/dashboard/orders");
+  revalidatePath("/dashboard/products");
+  revalidatePath("/dashboard/inventory");
+  revalidatePath("/dashboard/waiters");
+  revalidatePath("/dashboard");
+  if (customerId) revalidatePath(`/dashboard/customers/${customerId}`);
+}
+
+/**
+ * Deletes a checked-out Cafe Caisse order from the caisse orders screen:
+ * the invoice is fully reversed (stock back IN, balance effects undone,
+ * payments cascade) exactly like deletePosSale, then the order itself is
+ * removed. Gated on POS_MANAGE so the cashier needs no dashboard password.
+ */
+export async function deleteCafeOrder(orderId: string): Promise<ActionResult> {
+  const access = await requirePermission("POS_MANAGE");
+  if (!access.ok) return { error: access.error };
+  const feature = await requireFeatureForAction("CAFE_CAISSE");
+  if (!feature.ok) return { error: feature.error };
+  const t = await getDictionary();
+
+  const order = await loadCheckedOutCafeOrder(orderId);
+  if (!order?.invoice) return { error: t.orders.notFoundError };
+  if (order.invoice._count.returns > 0) {
+    return { error: t.invoices.cannotDeleteReturnedError };
+  }
+  const invoice = order.invoice;
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<{ id: string }[]>`
+        SELECT "id" FROM "Invoice" WHERE "id" = ${invoice.id} FOR UPDATE
+      `;
+      if (!locked[0]) return;
+
+      await reverseInvoiceOnDelete(tx, invoice, true);
+      await tx.invoice.delete({ where: { id: invoice.id } });
+      // The invoice reversal already put the stock back, so the order is
+      // removed with a plain delete (no second stock reversal).
+      await tx.order.delete({ where: { id: orderId } });
+    });
+  } catch {
+    return { error: t.invoices.deleteError };
+  }
+
+  revalidateCafeOrderPaths(order.customerId);
+  return { success: true };
+}
+
+/**
+ * "Edit" on the caisse orders screen: reverses and deletes the order's
+ * invoice (same reversal as deleteCafeOrder) and puts the order back to an
+ * open PENDING ticket, so the cashier edits it on the normal table /
+ * takeaway screen and checks out again — which issues a fresh invoice.
+ * Returns where to continue editing.
+ */
+export async function reopenCafeOrder(
+  orderId: string,
+): Promise<ActionResult & { href?: string }> {
+  const access = await requirePermission("POS_MANAGE");
+  if (!access.ok) return { error: access.error };
+  const feature = await requireFeatureForAction("CAFE_CAISSE");
+  if (!feature.ok) return { error: feature.error };
+  const t = await getDictionary();
+
+  const order = await loadCheckedOutCafeOrder(orderId);
+  if (!order?.invoice) return { error: t.orders.notFoundError };
+  if (order.invoice._count.returns > 0) {
+    return { error: t.invoices.cannotDeleteReturnedError };
+  }
+  const invoice = order.invoice;
+
+  // A table can only hold one open order at a time.
+  if (order.type === "DINE_IN" && order.tableId) {
+    const busy = await prisma.order.findFirst({
+      where: {
+        tableId: order.tableId,
+        status: { in: ["PENDING", "PROCESSING"] },
+        id: { not: orderId },
+      },
+      select: { id: true },
+    });
+    if (busy) return { error: t.tables.caisse.orders.tableBusyError };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<{ id: string }[]>`
+        SELECT "id" FROM "Invoice" WHERE "id" = ${invoice.id} FOR UPDATE
+      `;
+      if (!locked[0]) throw new Error("INVOICE_GONE");
+
+      await reverseInvoiceOnDelete(tx, invoice, true);
+      await tx.invoice.delete({ where: { id: invoice.id } });
+      // reverseInvoiceOnDelete marks the order CANCELLED; reopen it instead.
+      // Stock stays untouched until the next checkout invoices it again.
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: "PENDING" },
+      });
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "INVOICE_GONE") {
+      return { error: t.orders.notFoundError };
+    }
+    // Most likely lost a race for the table's single open-order slot.
+    return { error: t.tables.caisse.orders.tableBusyError };
+  }
+
+  revalidateCafeOrderPaths(order.customerId);
+  return {
+    success: true,
+    href:
+      order.type === "DINE_IN" && order.tableId
+        ? `/caisse/cafe/table/${order.tableId}`
+        : `/caisse/cafe/takeaway/${orderId}`,
+  };
 }
 
 export async function deleteInvoices(

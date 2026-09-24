@@ -334,6 +334,19 @@ export const fr = {
     cafeAvgInvoice: "Commande moyenne du café",
     cafeQrConversion: "Taux de conversion QR",
   },
+  bluetoothPrint: {
+    button: "Imprimer avec Thermer",
+    linkError: "Impossible de préparer l'impression Thermer, veuillez réessayer",
+    disabledError: "L'impression Thermer est désactivée dans les paramètres",
+    notFoundError: "Facture introuvable",
+    notInstalled:
+      "Thermer ne s'est pas ouvert. Vérifiez que l'application Thermer est installée sur cet appareil Android",
+    settingLabel: "Application Thermer (Android)",
+    settingDescription:
+      "Ajoute un bouton d'impression Thermer aux factures et imprime automatiquement les encaissements du café sur l'imprimante thermique associée à l'application Thermer.",
+    toastEnabled: "Impression Thermer activée",
+    toastDisabled: "Impression Thermer désactivée",
+  },
   statusLabels: {
     order: {
       PENDING: "En attente",
@@ -657,6 +670,35 @@ export const fr = {
     },
     caisse: {
       backToTables: "Retour aux tables",
+      orders: {
+        button: "Commandes",
+        title: "Commandes de la caisse",
+        description: "Commandes encaissées à la caisse. Réimprimez, modifiez ou supprimez-les.",
+        dateLabel: "Jour",
+        empty: "Aucune commande encaissée ce jour-là",
+        countTemplate: "{count} commandes",
+        totalTemplate: "Total : {total}",
+        waiterLabel: "Serveur",
+        paidLabel: "Payé",
+        printButton: "Imprimer",
+        editButton: "Modifier",
+        deleteButton: "Supprimer",
+        editConfirmTitle: "Modifier cette commande ?",
+        editConfirmDescription:
+          "Sa facture {invoice} sera annulée (stock et paiements rétablis) et la commande sera rouverte pour la modifier. Un nouvel encaissement crée une nouvelle facture.",
+        editConfirmAction: "Rouvrir et modifier",
+        deleteConfirmTitle: "Supprimer cette commande ?",
+        deleteConfirmDescription:
+          "La commande et sa facture {invoice} seront supprimées, le stock et les paiements rétablis. Action irréversible.",
+        deletedToast: "Commande supprimée",
+        loadingMore: "Chargement d'autres commandes…",
+        loadMoreError: "Impossible de charger plus de commandes, réessayez",
+        retryButton: "Réessayer",
+        scrollToLoadMore: "Faites défiler pour en charger plus",
+        shownTemplate: "{shown} sur {count} affichées",
+        tableBusyError:
+          "Cette table a déjà une commande ouverte. Encaissez-la ou videz-la avant de modifier celle-ci.",
+      },
       newTakeawayButton: "Nouvelle commande à emporter",
       openTakeawayOrdersTitle: "Commandes à emporter ouvertes",
       noOpenTakeawayOrders: "Aucune commande à emporter ouverte",
@@ -994,6 +1036,7 @@ export const fr = {
     statusFilterLabel: "Statut du paiement",
     allStatuses: "Tous les statuts",
     columnSequenceNumber: "N° séquentiel",
+    columnWaiter: "Serveur",
     columnInvoiceNumber: "Numéro de facture",
     columnCustomer: "Client",
     columnPhone: "Téléphone",

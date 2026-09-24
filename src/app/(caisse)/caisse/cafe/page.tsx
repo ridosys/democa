@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { LayoutGrid, ShoppingBag } from "lucide-react";
+import { LayoutGrid, ReceiptText, ShoppingBag } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/shared/brand-mark";
 import { AccountMenu } from "@/components/shared/account-menu";
 import { LocaleSwitcher } from "@/components/shared/locale-switcher";
@@ -58,6 +59,15 @@ export default async function CaisseTablesPage() {
           </span>
         </div>
         <div className="ms-auto flex shrink-0 items-center gap-2">
+          <Button
+            variant="outline"
+            className="cursor-pointer"
+            nativeButton={false}
+            render={<Link href="/caisse/cafe/orders" />}
+          >
+            <ReceiptText className="size-4" />
+            {t.tables.caisse.orders.button}
+          </Button>
           <NewTakeawayButton label={t.tables.caisse.newTakeawayButton} />
           <FullscreenToggle />
           <LocaleSwitcher />

@@ -17,6 +17,8 @@ export type SystemSettingsData = {
   colorsDark: ColorTokens;
   /** Default paper printed invoices are laid out for (58mm, 80mm, A5, A4). */
   receiptPaperSize: ReceiptPaperSize;
+  /** Android "Bluetooth Print" app integration (thermal printing by JSON). */
+  bluetoothPrint: boolean;
 };
 
 function mergeColors(base: ColorTokens, override: unknown): ColorTokens {
@@ -34,6 +36,7 @@ export const getSystemSettings = cache(
       colorsLight: mergeColors(companyConfig.colors.light, row?.colorsLight),
       colorsDark: mergeColors(companyConfig.colors.dark, row?.colorsDark),
       receiptPaperSize: resolveReceiptPaper(undefined, row?.receiptPaperSize),
+      bluetoothPrint: row?.bluetoothPrint ?? false,
     };
   },
 );

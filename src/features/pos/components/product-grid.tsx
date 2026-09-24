@@ -268,12 +268,23 @@ function ProductCard({
   const [imgLoaded, setImgLoaded] = useState(false);
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border bg-background">
-      <button
-        type="button"
-        onClick={onAdd}
-        className="relative aspect-square w-full bg-muted"
-      >
+    // Tapping the card (image, name, price — anywhere outside the buttons)
+    // opens the add dialog; the +/− buttons change the quantity by one
+    // directly and stop the click from reaching the card.
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onAdd}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onAdd();
+        }
+      }}
+      className="flex cursor-pointer flex-col overflow-hidden rounded-lg border bg-background transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+    >
+      <div className="relative aspect-square w-full bg-muted">
         {product.image ? (
           <>
             {!imgLoaded && <Skeleton className="absolute inset-0" />}
@@ -294,7 +305,7 @@ function ProductCard({
             <ImageOff className="size-6" />
           </span>
         )}
-      </button>
+      </div>
       <div className="flex flex-1 flex-col gap-1 p-2">
         <p className="line-clamp-2 text-xs font-medium" title={product.name}>
           {product.name}
@@ -321,7 +332,10 @@ function ProductCard({
                 type="button"
                 size="icon-xs"
                 variant="outline"
-                onClick={onDecrement}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDecrement();
+                }}
                 aria-label="-"
               >
                 <Minus />
@@ -333,7 +347,10 @@ function ProductCard({
                 type="button"
                 size="icon-xs"
                 variant="outline"
-                onClick={onIncrement}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onIncrement();
+                }}
                 aria-label="+"
               >
                 <Plus />
@@ -343,7 +360,10 @@ function ProductCard({
             <Button
               type="button"
               size="icon-xs"
-              onClick={onAdd}
+              onClick={(e) => {
+                e.stopPropagation();
+                onIncrement();
+              }}
               aria-label={addLabel}
             >
               <Plus />

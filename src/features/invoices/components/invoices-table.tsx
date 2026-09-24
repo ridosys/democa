@@ -28,9 +28,12 @@ const ALL_STATUSES = "all";
 export function InvoicesTable({
   data,
   searchable = false,
+  cafeMode = false,
 }: {
   data: InvoiceRow[];
   searchable?: boolean;
+  /** Cafe business type: shows a Waiter column instead of Customer. */
+  cafeMode?: boolean;
 }) {
   const { t, locale } = useLocale();
   const [query, setQuery] = useState("");
@@ -137,7 +140,7 @@ export function InvoicesTable({
         </div>
       )}
       <DataTable
-        columns={getInvoiceColumns(t, locale)}
+        columns={getInvoiceColumns(t, locale, cafeMode)}
         data={paged}
         onDeleteSelected={handleBulkDelete}
         requireDeletePassword

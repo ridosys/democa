@@ -390,3 +390,102 @@ export async function getOpenTakeawayOrders() {
     waiterName: order.waiter?.name ?? null,
   }));
 }
+
+export const CAFE_ORDERS_PAGE_SIZE = 130;
+
+function cafeOrdersDayWhere(day: Date) {
+  const to = new Date(day.getTime() + 24 * 60 * 60 * 1000);
+  return {
+    createdAt: { gte: day, lt: to },
+    order: { type: { in: ["DINE_IN" as const, "TAKEAWAY" as const] } },
+  };
+}
+
+/** One page of checked-out Cafe Caisse orders (dine-in / takeaway, already
+ * invoiced) whose invoice was issued on one day ("YYYY-MM-DD" parsed as a
+ * UTC day, like the waiter daily report) — newest first, for the caisse
+ * orders screen where a cashier reprints, edits or deletes them. */
+export async function getCheckedOutCafeOrders(
+  day: Date,
+  offset = 0,
+  limit = CAFE_ORDERS_PAGE_SIZE,
+) {
+  const invoices = await prisma.invoice.findMany({
+    where: cafeOrdersDayWhere(day),
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    skip: offset,
+    take: limit + 1,
+    select: {
+      id: true,
+      invoiceNumber: true,
+      total: true,
+      paidAmount: true,
+      paymentStatus: true,
+      paymentMethod: true,
+      createdAt: true,
+      order: {
+        select: {
+          id: true,
+          orderNumber: true,
+          type: true,
+          table: { select: { name: true } },
+          waiter: { select: { name: true } },
+          items: {
+            select: {
+              quantity: true,
+              product: { select: { name: true } },
+              options: { select: { optionName: true } },
+            },
+            orderBy: { id: "asc" },
+          },
+        },
+      },
+    },
+  });
+
+  const hasMore = invoices.length > limit;
+  const items = invoices.slice(0, limit).flatMap((invoice) => {
+    const order = invoice.order;
+    if (!order) return [];
+    return [
+      {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        type: order.type as "DINE_IN" | "TAKEAWAY",
+        tableName: order.table?.name ?? null,
+        waiterName: order.waiter?.name ?? null,
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        total: invoice.total.toNumber(),
+        paidAmount: invoice.paidAmount.toNumber(),
+        paymentStatus: invoice.paymentStatus,
+        paymentMethod: invoice.paymentMethod,
+        checkedOutAt: invoice.createdAt,
+        items: order.items.map((item) => ({
+          name: item.product.name,
+          quantity: item.quantity.toNumber(),
+          options: item.options.map((option) => option.optionName),
+        })),
+      },
+    ];
+  });
+
+  return { items, nextOffset: hasMore ? offset + limit : null };
+}
+
+/** Count and sum of the whole day, independent of how many pages are loaded. */
+export async function getCheckedOutCafeOrdersSummary(day: Date) {
+  const result = await prisma.invoice.aggregate({
+    where: cafeOrdersDayWhere(day),
+    _count: { _all: true },
+    _sum: { total: true },
+  });
+  return {
+    count: result._count._all,
+    total: result._sum.total?.toNumber() ?? 0,
+  };
+}
+
+export type CheckedOutCafeOrder = Awaited<
+  ReturnType<typeof getCheckedOutCafeOrders>
+>["items"][number];

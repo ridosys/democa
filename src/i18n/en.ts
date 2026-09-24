@@ -326,6 +326,19 @@ export const en = {
     cafeAvgInvoice: "Avg. Cafe order",
     cafeQrConversion: "QR conversion",
   },
+  bluetoothPrint: {
+    button: "Print with Thermer",
+    linkError: "Couldn't prepare the Thermer print, please try again",
+    disabledError: "Thermer printing is turned off in settings",
+    notFoundError: "Invoice not found",
+    notInstalled:
+      "Thermer didn't open. Make sure the Thermer app is installed on this Android device",
+    settingLabel: "Thermer app (Android)",
+    settingDescription:
+      "Adds a Thermer print button to invoices and prints café checkouts automatically on the thermal printer paired with the Thermer app.",
+    toastEnabled: "Thermer printing enabled",
+    toastDisabled: "Thermer printing disabled",
+  },
   statusLabels: {
     order: {
       PENDING: "Pending",
@@ -641,6 +654,35 @@ export const en = {
     },
     caisse: {
       backToTables: "Back to tables",
+      orders: {
+        button: "Orders",
+        title: "Caisse orders",
+        description: "Orders checked out at the caisse. Reprint, edit or delete them.",
+        dateLabel: "Day",
+        empty: "No orders checked out on this day",
+        countTemplate: "{count} orders",
+        totalTemplate: "Total: {total}",
+        waiterLabel: "Waiter",
+        paidLabel: "Paid",
+        printButton: "Print",
+        editButton: "Edit",
+        deleteButton: "Delete",
+        editConfirmTitle: "Edit this order?",
+        editConfirmDescription:
+          "Its invoice {invoice} will be cancelled (stock and payments are reversed) and the order reopens so you can change it. Checking out again creates a new invoice.",
+        editConfirmAction: "Reopen and edit",
+        deleteConfirmTitle: "Delete this order?",
+        deleteConfirmDescription:
+          "The order and its invoice {invoice} will be deleted, and stock and payments reversed. This cannot be undone.",
+        deletedToast: "Order deleted",
+        loadingMore: "Loading more orders…",
+        loadMoreError: "Couldn't load more orders, please try again",
+        retryButton: "Retry",
+        scrollToLoadMore: "Scroll down to load more",
+        shownTemplate: "Showing {shown} of {count}",
+        tableBusyError:
+          "This table already has an open order. Check it out or clear it before editing this one.",
+      },
       newTakeawayButton: "New takeaway",
       openTakeawayOrdersTitle: "Open takeaway orders",
       noOpenTakeawayOrders: "No open takeaway orders",
@@ -973,6 +1015,7 @@ export const en = {
     statusFilterLabel: "Payment status",
     allStatuses: "All statuses",
     columnSequenceNumber: "Sequence No.",
+    columnWaiter: "Waiter",
     columnInvoiceNumber: "Invoice number",
     columnCustomer: "Customer",
     columnPhone: "Phone",

@@ -43,7 +43,7 @@ import {
   type SelectedOption,
 } from "@/features/tables/actions";
 import { getOrCreateInvoiceForOrder } from "@/features/invoices/actions";
-import { printInvoiceReceipt } from "@/features/invoices/print-receipt";
+import { autoPrintInvoiceReceipt } from "@/features/invoices/bluetooth-print";
 import {
   fetchProductOptionGroupsAction,
 } from "@/features/product-options/actions";
@@ -103,6 +103,7 @@ export function OpenOrderWorkspace({
   waiterId,
   waiterName,
   changeWaiterHref,
+  bluetoothPrint,
 }: {
   adminName: string;
   logoUrl: string | null;
@@ -122,6 +123,9 @@ export function OpenOrderWorkspace({
   waiterId: string | null;
   waiterName: string | null;
   changeWaiterHref: string | null;
+  /** Checkout receipts go through the Bluetooth Print app (settings toggle)
+   * instead of the browser print dialog. */
+  bluetoothPrint: boolean;
 }) {
   const router = useRouter();
   const { locale, t } = useLocale();
@@ -278,7 +282,9 @@ export function OpenOrderWorkspace({
         return;
       }
       toast.success(t.tables.caisse.checkoutSuccessToast);
-      if (result.invoiceId) printInvoiceReceipt(result.invoiceId);
+      if (result.invoiceId) {
+        autoPrintInvoiceReceipt(result.invoiceId, bluetoothPrint, t.bluetoothPrint);
+      }
       router.push("/caisse/cafe");
     });
   }

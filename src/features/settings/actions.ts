@@ -76,6 +76,30 @@ export async function updateReceiptPaperSize(
   return { success: true };
 }
 
+/** Turn the Android "Bluetooth Print" app integration on or off. */
+export async function updateBluetoothPrint(
+  enabled: unknown,
+): Promise<ActionResult> {
+  const access = await requirePermission("SETTINGS_MANAGE");
+  if (!access.ok) return { error: access.error };
+  const t = await getDictionary();
+
+  if (typeof enabled !== "boolean") return { error: t.settings.validationError };
+
+  const existing = await getSystemSettingsRow();
+  if (existing) {
+    await prisma.systemSettings.update({
+      where: { id: existing.id },
+      data: { bluetoothPrint: enabled },
+    });
+  } else {
+    await prisma.systemSettings.create({ data: { bluetoothPrint: enabled } });
+  }
+
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
 /**
  * Upload (or replace) the custom company logo. The file is validated on
  * the server — real byte signature, size limit, and an SVG active-content

@@ -16,6 +16,8 @@ import { getBrandOptions } from "@/features/brands/queries";
 import { InvoiceForm } from "@/features/invoices/components/invoice-form";
 import { PaymentStatusBadge } from "@/features/invoices/components/payment-status-badge";
 import { RecordPaymentDialog } from "@/features/invoices/components/record-payment-dialog";
+import { BluetoothPrintButton } from "@/features/invoices/components/bluetooth-print-button";
+import { getSystemSettings } from "@/features/settings/queries";
 import { formatCurrency } from "@/lib/currency";
 import { formatSequenceNumber } from "@/lib/sequence-number";
 import { requirePageAccess } from "@/lib/permissions";
@@ -32,7 +34,7 @@ export default async function InvoiceEditPage({
   await requirePageAccess("INVOICES_VIEW");
 
   const { id } = await params;
-  const [t, locale, invoice, productRows, customers, categories, brands] = await Promise.all([
+  const [t, locale, invoice, productRows, customers, categories, brands, settings] = await Promise.all([
     getDictionary(),
     getLocale(),
     getInvoiceById(id),
@@ -40,6 +42,7 @@ export default async function InvoiceEditPage({
     getCustomerOptions(),
     getCategoryOptions(),
     getBrandOptions(),
+    getSystemSettings(),
   ]);
 
   if (!invoice) notFound();
@@ -88,6 +91,9 @@ export default async function InvoiceEditPage({
               <Printer className="size-4" />
               {t.invoices.viewPrintButton}
             </Button>
+            {settings.bluetoothPrint && (
+              <BluetoothPrintButton invoiceId={invoice.id} size="default" />
+            )}
           </div>
         }
       />

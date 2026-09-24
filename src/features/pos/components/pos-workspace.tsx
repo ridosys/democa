@@ -564,7 +564,7 @@ export function PosWorkspace({
               customerId={customer.id}
               cartQuantities={cartQuantities}
               onAddProduct={(p) => setDialogProduct(p)}
-              onIncrement={(p) => changeQty(p.id, 1)}
+              onIncrement={quickAdd}
               onDecrement={(p) => changeQty(p.id, -1)}
             />
           </ResizablePanel>

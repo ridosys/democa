@@ -3,13 +3,15 @@
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requirePermission } from "@/lib/permissions";
+import { hasPermission, requirePermission } from "@/lib/permissions";
 import { hasFeature, requireFeatureForAction } from "@/lib/features";
 import { isUniqueConstraintError } from "@/lib/prisma-errors";
 import { tableSchema } from "@/features/tables/schema";
 import { createOrder, updateOrderItems, deleteOrder } from "@/features/orders/actions";
 import { getDictionary } from "@/i18n/server";
 import { formatMessage } from "@/i18n/format";
+import { getCheckedOutCafeOrders } from "@/features/tables/queries";
+import { parseDateInputValue } from "@/lib/date";
 
 type ActionResult = { error?: string; success?: boolean };
 
@@ -535,4 +537,14 @@ export async function assignWaiter(
 
   revalidatePath("/caisse/cafe");
   return { success: true };
+}
+
+/** Next page for the caisse orders screen's infinite scroll. */
+export async function fetchCheckedOutCafeOrdersAction(date: string, offset: number) {
+  if (!(await hasPermission("POS_VIEW"))) return null;
+  if (!(await hasFeature("CAFE_CAISSE"))) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isInteger(offset) || offset < 0) {
+    return null;
+  }
+  return getCheckedOutCafeOrders(parseDateInputValue(date), offset);
 }

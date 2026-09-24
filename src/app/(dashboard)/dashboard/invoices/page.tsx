@@ -9,6 +9,7 @@ import { getInvoicesPage } from "@/features/invoices/queries";
 import { InvoicesTable } from "@/features/invoices/components/invoices-table";
 import { InvoicesFilterBar } from "@/features/invoices/components/invoices-filter-bar";
 import { requirePageAccess } from "@/lib/permissions";
+import { hasFeature } from "@/lib/features";
 import { getDictionary } from "@/i18n/server";
 import type { PaymentStatus } from "@/generated/prisma/client";
 
@@ -30,10 +31,15 @@ export default async function InvoicesPage({
     ? (params.paymentStatus as PaymentStatus)
     : undefined;
 
-  const [t, { items, total, pageSize }] = await Promise.all([
-    getDictionary(),
-    getInvoicesPage({ query, paymentStatus, page }),
-  ]);
+  const [t, { items, total, pageSize }, cafeCaisseEnabled, retailCaisseEnabled] =
+    await Promise.all([
+      getDictionary(),
+      getInvoicesPage({ query, paymentStatus, page }),
+      hasFeature("CAFE_CAISSE"),
+      hasFeature("RETAIL_CAISSE"),
+    ]);
+  // A pure Cafe business names the waiter; stock/retail keeps the customer.
+  const cafeMode = cafeCaisseEnabled && !retailCaisseEnabled;
 
   return (
     <div className="space-y-6">
@@ -61,6 +67,7 @@ export default async function InvoicesPage({
       ) : (
         <>
           <InvoicesTable
+            cafeMode={cafeMode}
             data={items.map((item) => ({
               id: item.id,
               sequenceNumber: item.sequenceNumber,
