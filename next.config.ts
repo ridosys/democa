@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
     "/*": [
       "./node_modules/pdfjs-dist/legacy/build/**/*",
       "./node_modules/pdfjs-dist/standard_fonts/**/*",
+      // Fonts for the server-rendered (Arabic) thermal receipt image.
+      "./assets/fonts/**/*",
     ],
   },
   images: {

@@ -17,12 +17,12 @@ import type { ReceiptPaperSize } from "@/lib/receipt-paper";
  *
  *   type 0 text  { content, bold 0|1, align 0|1|2, format 0-4 }
  *   type 1 image { path, align }
- *   type 4 html  { content } — rendered to an image by the app
  *
  * Latin receipts are sent as native text lines (crisp, fast). Anything
- * containing Arabic is sent as one HTML entry instead: thermal printer code
- * pages can't shape / right-to-left Arabic, while the app's HTML renderer
- * can, so the text stays exactly as stored (UTF-8, never transliterated).
+ * containing Arabic is sent as one image instead, rendered on the server
+ * (receipt-image.ts): thermal printer code pages can't shape right-to-left
+ * Arabic, and the apps' HTML renderers lay it out badly, while a bitmap
+ * prints the text exactly as stored (UTF-8, never transliterated).
  */
 
 type InvoiceData = NonNullable<Awaited<ReturnType<typeof getInvoiceById>>>;
@@ -35,11 +35,10 @@ type TextEntry = {
   format: 0 | 1 | 2 | 3 | 4;
 };
 type ImageEntry = { type: 1; path: string; align: 0 | 1 | 2 };
-type HtmlEntry = { type: 4; content: string };
-export type BluetoothPrintEntry = TextEntry | ImageEntry | HtmlEntry;
+export type BluetoothPrintEntry = TextEntry | ImageEntry;
 
 /** Receipt layout, independent of how it ends up being printed. */
-type Line =
+export type ReceiptLine =
   | { kind: "title"; text: string }
   | { kind: "center"; text: string; bold?: boolean; ltr?: boolean }
   | { kind: "text"; text: string }
@@ -85,7 +84,7 @@ function printableLogoUrl(logoUrl: string | null, origin: string): string | null
     : absolute;
 }
 
-function buildLines(invoice: InvoiceData, settings: SystemSettingsData, lang: Lang): Line[] {
+function buildLines(invoice: InvoiceData, settings: SystemSettingsData, lang: Lang): ReceiptLine[] {
   const t = INVOICE_PRINT_LABELS[lang];
   const extra = EXTRA_LABELS[lang];
   const statusLabels = dictionaries[lang].statusLabels;
@@ -99,7 +98,7 @@ function buildLines(invoice: InvoiceData, settings: SystemSettingsData, lang: La
   const paid = Number(invoice.paidAmount);
   const remaining = Math.max(0, Math.round((total - paid) * 100) / 100);
 
-  const lines: Line[] = [
+  const lines: ReceiptLine[] = [
     { kind: "center", text: settings.appName, bold: true },
     { kind: "title", text: t.title.toUpperCase() },
     { kind: "center", text: invoice.invoiceNumber, ltr: true },
@@ -204,7 +203,7 @@ function text(content: string, opts: Partial<Omit<TextEntry, "type" | "content">
   return { type: 0, content, bold: opts.bold ?? 0, align: opts.align ?? 0, format: opts.format ?? 0 };
 }
 
-function toTextEntries(lines: Line[], width: number): TextEntry[] {
+function toTextEntries(lines: ReceiptLine[], width: number): TextEntry[] {
   const entries: TextEntry[] = [];
   for (const line of lines) {
     switch (line.kind) {
@@ -246,75 +245,39 @@ function toTextEntries(lines: Line[], width: number): TextEntry[] {
   return entries;
 }
 
-// ---------- HTML rendering (Arabic / RTL) ----------
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function toHtmlEntry(lines: Line[], dir: "rtl" | "ltr"): HtmlEntry {
-  // Numbers / codes are pinned left-to-right so an RTL receipt doesn't
-  // reorder "1 x 3.00" or the date.
-  const row = (left: string, right: string, style = "", ltrLeft = false) =>
-    `<table style="width:100%;border-collapse:collapse;${style}"><tr>` +
-    `<td>${ltrLeft ? `<span dir="ltr">${escapeHtml(left)}</span>` : escapeHtml(left)}</td>` +
-    `<td dir="ltr" style="text-align:${dir === "rtl" ? "left" : "right"};white-space:nowrap">${escapeHtml(right)}</td>` +
-    `</tr></table>`;
-
-  const body = lines
-    .map((line) => {
-      switch (line.kind) {
-        case "title":
-          return `<div style="text-align:center;font-size:1.8em;font-weight:bold">${escapeHtml(line.text)}</div>`;
-        case "center":
-          return `<div style="text-align:center;${line.bold ? "font-weight:bold" : ""}"${line.ltr ? ' dir="ltr"' : ""}>${escapeHtml(line.text)}</div>`;
-        case "text":
-          return `<div>${escapeHtml(line.text)}</div>`;
-        case "row":
-          return row(line.left, line.right, line.bold ? "font-weight:bold" : "");
-        case "item":
-          return `<div>${escapeHtml(line.name)}</div>${row(line.detail, line.total, "font-size:0.9em", true)}`;
-        case "total":
-          return row(line.label, line.value, "font-weight:bold;font-size:1.4em");
-        case "rule":
-          return `<div style="border-top:1px dashed #000;margin:4px 0"></div>`;
-      }
-    })
-    .join("");
-
-  return {
-    type: 4,
-    content: `<div dir="${dir}" style="font-family:sans-serif;font-size:22px;color:#000;background:#fff">${body}<br/><br/></div>`,
-  };
+/** The receipt's lines, and whether they must be printed as an image
+ * (anything Arabic) rather than as plain text. */
+export function buildReceiptLines(invoice: InvoiceData, settings: SystemSettingsData) {
+  const lang = resolveInvoiceLang(undefined, invoice.language);
+  const lines = buildLines(invoice, settings, lang);
+  const needsImage =
+    lang === "ar" ||
+    lines.some((line) =>
+      Object.values(line).some((value) => typeof value === "string" && ARABIC.test(value)),
+    );
+  return { lines, needsImage, dir: lang === "ar" ? ("rtl" as const) : ("ltr" as const) };
 }
 
 export function buildBluetoothReceipt({
   invoice,
   settings,
   origin,
+  imageUrl,
 }: {
   invoice: InvoiceData;
   settings: SystemSettingsData;
   /** Origin the app reached us on — used to make a bundled logo absolute. */
   origin: string;
+  /** Signed URL of this receipt rendered as a PNG (for Arabic receipts). */
+  imageUrl: string;
 }): Record<string, BluetoothPrintEntry> {
-  const lang = resolveInvoiceLang(undefined, invoice.language);
-  const lines = buildLines(invoice, settings, lang);
+  const { lines, needsImage } = buildReceiptLines(invoice, settings);
 
   const entries: BluetoothPrintEntry[] = [];
   const logo = printableLogoUrl(settings.logoUrl, origin);
   if (logo) entries.push({ type: 1, path: logo, align: 1 });
 
-  const needsHtml =
-    lang === "ar" ||
-    lines.some((line) =>
-      Object.values(line).some((value) => typeof value === "string" && ARABIC.test(value)),
-    );
-  if (needsHtml) entries.push(toHtmlEntry(lines, lang === "ar" ? "rtl" : "ltr"));
+  if (needsImage) entries.push({ type: 1, path: imageUrl, align: 1 });
   else entries.push(...toTextEntries(lines, receiptLineWidth(settings.receiptPaperSize)));
 
   // The app expects a JSON object keyed "0", "1", … (PHP JSON_FORCE_OBJECT).
