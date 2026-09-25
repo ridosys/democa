@@ -86,7 +86,7 @@ export default async function CaisseCafeOrdersPage({
           totalCount={summary.count}
           initialItems={firstPage.items}
           initialNextOffset={firstPage.nextOffset}
-          bluetoothPrint={settings.bluetoothPrint}
+          printMethod={settings.printMethod}
         />
       </div>
     </div>

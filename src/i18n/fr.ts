@@ -337,15 +337,34 @@ export const fr = {
   bluetoothPrint: {
     button: "Imprimer avec Thermer",
     linkError: "Impossible de préparer l'impression Thermer, veuillez réessayer",
-    disabledError: "L'impression Thermer est désactivée dans les paramètres",
+    disabledError: "Thermer n'est pas le mode d'impression choisi dans les paramètres",
     notFoundError: "Facture introuvable",
     notInstalled:
       "Thermer ne s'est pas ouvert. Vérifiez que l'application Thermer est installée sur cet appareil Android",
-    settingLabel: "Application Thermer (Android)",
-    settingDescription:
-      "Ajoute un bouton d'impression Thermer aux factures et imprime automatiquement les encaissements du café sur l'imprimante thermique associée à l'application Thermer.",
-    toastEnabled: "Impression Thermer activée",
-    toastDisabled: "Impression Thermer désactivée",
+  },
+  escposPrint: {
+    button: "Imprimer",
+    buildError: "Impossible de préparer le ticket pour l'impression, veuillez réessayer",
+    disabledError: "Open ESC/POS Print Service n'est pas le mode d'impression choisi dans les paramètres",
+    notFoundError: "Facture introuvable",
+    notInstalled:
+      "Open ESC/POS Print Service ne s'est pas ouvert. Vérifiez que l'application est installée sur cet appareil Android et qu'une imprimante par défaut y est choisie",
+  },
+  printMethod: {
+    label: "Impression des tickets",
+    options: {
+      browser: "Boîte d'impression du navigateur",
+      thermer: "Application Thermer (Android)",
+      escpos: "Open ESC/POS Print Service (Android)",
+    },
+    descriptions: {
+      browser: "Les tickets ouvrent la boîte d'impression du navigateur, pour toute imprimante ou pour enregistrer en PDF.",
+      thermer:
+        "Les tickets sont envoyés à l'application Thermer, qui les imprime sur son imprimante thermique Bluetooth. Les encaissements du café s'impriment automatiquement.",
+      escpos:
+        "Les tickets s'impriment directement sur l'imprimante par défaut de l'application Open ESC/POS Print Service, sans boîte d'impression. Les encaissements du café s'impriment automatiquement. Réglez la largeur du papier de l'imprimante dans l'application.",
+    },
+    toastUpdated: "Mode d'impression mis à jour",
   },
   statusLabels: {
     order: {

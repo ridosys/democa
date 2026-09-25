@@ -17,6 +17,7 @@ import {
 } from "./logo";
 import { getDictionary } from "@/i18n/server";
 import { isReceiptPaperSize } from "@/lib/receipt-paper";
+import { isPrintMethod } from "@/lib/print-method";
 
 type ActionResult = { error?: string; success?: boolean };
 
@@ -76,24 +77,23 @@ export async function updateReceiptPaperSize(
   return { success: true };
 }
 
-/** Turn the Android "Bluetooth Print" app integration on or off. */
-export async function updateBluetoothPrint(
-  enabled: unknown,
-): Promise<ActionResult> {
+/** Choose how receipts are printed (browser dialog, Thermer app or the
+ * Open ESC/POS Print Service app). */
+export async function updatePrintMethod(method: unknown): Promise<ActionResult> {
   const access = await requirePermission("SETTINGS_MANAGE");
   if (!access.ok) return { error: access.error };
   const t = await getDictionary();
 
-  if (typeof enabled !== "boolean") return { error: t.settings.validationError };
+  if (!isPrintMethod(method)) return { error: t.settings.validationError };
 
   const existing = await getSystemSettingsRow();
   if (existing) {
     await prisma.systemSettings.update({
       where: { id: existing.id },
-      data: { bluetoothPrint: enabled },
+      data: { printMethod: method },
     });
   } else {
-    await prisma.systemSettings.create({ data: { bluetoothPrint: enabled } });
+    await prisma.systemSettings.create({ data: { printMethod: method } });
   }
 
   revalidatePath("/", "layout");

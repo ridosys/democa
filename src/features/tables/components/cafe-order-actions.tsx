@@ -16,8 +16,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { deleteCafeOrder, reopenCafeOrder } from "@/features/invoices/actions";
-import { printInvoiceReceipt } from "@/features/invoices/print-receipt";
-import { BluetoothPrintButton } from "@/features/invoices/components/bluetooth-print-button";
+import { printInvoiceWith } from "@/features/invoices/bluetooth-print";
+import type { PrintMethod } from "@/lib/print-method";
 import { useLocale } from "@/i18n/locale-provider";
 import { formatMessage } from "@/i18n/format";
 
@@ -28,13 +28,13 @@ export function CafeOrderActions({
   orderId,
   invoiceId,
   invoiceNumber,
-  bluetoothPrint,
+  printMethod,
 }: {
   orderId: string;
   invoiceId: string;
   invoiceNumber: string;
-  /** Show the Bluetooth Print app button (settings toggle). */
-  bluetoothPrint: boolean;
+  /** Receipt printing method from settings (browser / printer app). */
+  printMethod: PrintMethod;
 }) {
   const { t } = useLocale();
   const to = t.tables.caisse.orders;
@@ -76,7 +76,7 @@ export function CafeOrderActions({
           variant="outline"
           size="sm"
           className="cursor-pointer"
-          onClick={() => printInvoiceReceipt(invoiceId)}
+          onClick={() => printInvoiceWith(printMethod, invoiceId, t)}
         >
           <Printer className="size-4" />
           {to.printButton}
@@ -101,9 +101,6 @@ export function CafeOrderActions({
           <Trash2 className="size-4" />
           {to.deleteButton}
         </Button>
-        {bluetoothPrint && (
-          <BluetoothPrintButton invoiceId={invoiceId} className="col-span-3" />
-        )}
       </div>
 
       <AlertDialog

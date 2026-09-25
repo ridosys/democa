@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchCheckedOutCafeOrdersAction } from "@/features/tables/actions";
 import type { CheckedOutCafeOrder } from "@/features/tables/queries";
+import type { PrintMethod } from "@/lib/print-method";
 import { CafeOrderActions } from "@/features/tables/components/cafe-order-actions";
 import { useLocale } from "@/i18n/locale-provider";
 import { formatMessage } from "@/i18n/format";
@@ -26,13 +27,13 @@ export function CafeOrdersList({
   totalCount,
   initialItems,
   initialNextOffset,
-  bluetoothPrint,
+  printMethod,
 }: {
   date: string;
   totalCount: number;
   initialItems: CheckedOutCafeOrder[];
   initialNextOffset: number | null;
-  bluetoothPrint: boolean;
+  printMethod: PrintMethod;
 }) {
   const { t, locale } = useLocale();
   const to = t.tables.caisse.orders;
@@ -152,7 +153,7 @@ export function CafeOrdersList({
               orderId={order.id}
               invoiceId={order.invoiceId}
               invoiceNumber={order.invoiceNumber}
-              bluetoothPrint={bluetoothPrint}
+              printMethod={printMethod}
             />
           </div>
         ))}

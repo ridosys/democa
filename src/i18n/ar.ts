@@ -321,15 +321,34 @@ export const ar = {
   bluetoothPrint: {
     button: "طباعة عبر Thermer",
     linkError: "تعذّر تجهيز الطباعة عبر Thermer، يرجى المحاولة مرة أخرى",
-    disabledError: "الطباعة عبر Thermer معطّلة في الإعدادات",
+    disabledError: "Thermer ليس طريقة الطباعة المختارة في الإعدادات",
     notFoundError: "الفاتورة غير موجودة",
     notInstalled:
       "لم يُفتح تطبيق Thermer. تأكد من تثبيت تطبيق Thermer على جهاز الأندرويد هذا",
-    settingLabel: "تطبيق Thermer (أندرويد)",
-    settingDescription:
-      "يضيف زر طباعة Thermer إلى الفواتير ويطبع فواتير المقهى تلقائياً عند الدفع على الطابعة الحرارية المرتبطة بتطبيق Thermer.",
-    toastEnabled: "تم تفعيل الطباعة عبر Thermer",
-    toastDisabled: "تم تعطيل الطباعة عبر Thermer",
+  },
+  escposPrint: {
+    button: "طباعة",
+    buildError: "تعذّر تجهيز الفاتورة للطباعة، يرجى المحاولة مرة أخرى",
+    disabledError: "Open ESC/POS Print Service ليس طريقة الطباعة المختارة في الإعدادات",
+    notFoundError: "الفاتورة غير موجودة",
+    notInstalled:
+      "لم يُفتح تطبيق Open ESC/POS Print Service. تأكد من تثبيته على جهاز الأندرويد هذا ومن اختيار طابعة افتراضية فيه",
+  },
+  printMethod: {
+    label: "طباعة الفواتير",
+    options: {
+      browser: "نافذة الطباعة في المتصفح",
+      thermer: "تطبيق Thermer (أندرويد)",
+      escpos: "Open ESC/POS Print Service (أندرويد)",
+    },
+    descriptions: {
+      browser: "تفتح الفواتير نافذة الطباعة في المتصفح، لأي طابعة أو للحفظ كملف PDF.",
+      thermer:
+        "تُرسل الفواتير إلى تطبيق Thermer الذي يطبعها على الطابعة الحرارية المرتبطة به عبر البلوتوث. فواتير المقهى تُطبع تلقائياً عند الدفع.",
+      escpos:
+        "تُطبع الفواتير مباشرة على الطابعة الافتراضية في تطبيق Open ESC/POS Print Service دون نافذة الطباعة. فواتير المقهى تُطبع تلقائياً عند الدفع. اضبط عرض ورق الطابعة داخل التطبيق.",
+    },
+    toastUpdated: "تم تحديث طريقة الطباعة",
   },
   statusLabels: {
     order: {

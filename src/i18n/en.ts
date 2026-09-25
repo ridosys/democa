@@ -329,15 +329,34 @@ export const en = {
   bluetoothPrint: {
     button: "Print with Thermer",
     linkError: "Couldn't prepare the Thermer print, please try again",
-    disabledError: "Thermer printing is turned off in settings",
+    disabledError: "Thermer isn't the printing method selected in settings",
     notFoundError: "Invoice not found",
     notInstalled:
       "Thermer didn't open. Make sure the Thermer app is installed on this Android device",
-    settingLabel: "Thermer app (Android)",
-    settingDescription:
-      "Adds a Thermer print button to invoices and prints café checkouts automatically on the thermal printer paired with the Thermer app.",
-    toastEnabled: "Thermer printing enabled",
-    toastDisabled: "Thermer printing disabled",
+  },
+  escposPrint: {
+    button: "Print",
+    buildError: "Couldn't prepare the receipt for printing, please try again",
+    disabledError: "Open ESC/POS Print Service isn't the printing method selected in settings",
+    notFoundError: "Invoice not found",
+    notInstalled:
+      "Open ESC/POS Print Service didn't open. Make sure the app is installed on this Android device and a default printer is set in it",
+  },
+  printMethod: {
+    label: "Receipt printing",
+    options: {
+      browser: "Browser print dialog",
+      thermer: "Thermer app (Android)",
+      escpos: "Open ESC/POS Print Service (Android)",
+    },
+    descriptions: {
+      browser: "Receipts open the browser's print dialog, for any printer or to save as PDF.",
+      thermer:
+        "Receipts are sent to the Thermer app, which prints them on its paired Bluetooth thermal printer. Café checkouts print automatically.",
+      escpos:
+        "Receipts print directly on the default printer of the Open ESC/POS Print Service app, without the print dialog. Café checkouts print automatically. Set the paper width of the printer inside the app.",
+    },
+    toastUpdated: "Printing method updated",
   },
   statusLabels: {
     order: {

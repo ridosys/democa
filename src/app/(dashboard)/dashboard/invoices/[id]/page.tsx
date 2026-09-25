@@ -91,9 +91,11 @@ export default async function InvoiceEditPage({
               <Printer className="size-4" />
               {t.invoices.viewPrintButton}
             </Button>
-            {settings.bluetoothPrint && (
-              <BluetoothPrintButton invoiceId={invoice.id} size="default" />
-            )}
+            <BluetoothPrintButton
+              invoiceId={invoice.id}
+              method={settings.printMethod}
+              size="default"
+            />
           </div>
         }
       />

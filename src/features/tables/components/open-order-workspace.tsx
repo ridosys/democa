@@ -56,6 +56,7 @@ import { useLocale } from "@/i18n/locale-provider";
 import { formatCurrency } from "@/lib/currency";
 import type { Locale } from "@/i18n/config";
 import type { InvoiceLanguage, PaymentMethod } from "@/generated/prisma/client";
+import type { PrintMethod } from "@/lib/print-method";
 
 type ProductFeed = { items: PosProduct[]; total: number; nextOffset: number | null };
 type CategoryFeed = { total: number; items: PosCategory[]; nextOffset: number | null };
@@ -103,7 +104,7 @@ export function OpenOrderWorkspace({
   waiterId,
   waiterName,
   changeWaiterHref,
-  bluetoothPrint,
+  printMethod,
 }: {
   adminName: string;
   logoUrl: string | null;
@@ -125,7 +126,7 @@ export function OpenOrderWorkspace({
   changeWaiterHref: string | null;
   /** Checkout receipts go through the Bluetooth Print app (settings toggle)
    * instead of the browser print dialog. */
-  bluetoothPrint: boolean;
+  printMethod: PrintMethod;
 }) {
   const router = useRouter();
   const { locale, t } = useLocale();
@@ -283,7 +284,7 @@ export function OpenOrderWorkspace({
       }
       toast.success(t.tables.caisse.checkoutSuccessToast);
       if (result.invoiceId) {
-        autoPrintInvoiceReceipt(result.invoiceId, bluetoothPrint, t.bluetoothPrint);
+        autoPrintInvoiceReceipt(printMethod, result.invoiceId, t);
       }
       router.push("/caisse/cafe");
     });

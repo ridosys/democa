@@ -79,7 +79,7 @@ function layout(
   width: number,
   dir: Dir,
 ): { ops: Op[]; height: number } {
-  const base = width >= 576 ? 26 : 22;
+  const base = width >= 576 ? 26 : 25;
   const inner = width - PADDING * 2;
   const ops: Op[] = [];
   let y = PADDING;

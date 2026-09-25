@@ -30,7 +30,7 @@ export async function loadPrintRequest(
   }
 
   const [invoice, settings] = await Promise.all([getInvoiceById(id), getSystemSettings()]);
-  if (!settings.bluetoothPrint) {
+  if (settings.printMethod !== "thermer") {
     return { ok: false, status: 403, error: "Printer app printing is disabled" };
   }
   if (!invoice) return { ok: false, status: 404, error: "Invoice not found" };

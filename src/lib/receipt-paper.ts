@@ -25,7 +25,7 @@ export type ReceiptPaperSpec = {
 };
 
 export const RECEIPT_PAPER_SPECS: Record<ReceiptPaperSize, ReceiptPaperSpec> = {
-  "58mm": { widthMm: 58, heightMm: null, paddingMm: 3, fontPx: 10 },
+  "58mm": { widthMm: 58, heightMm: null, paddingMm: 3, fontPx: 11 },
   "80mm": { widthMm: 80, heightMm: null, paddingMm: 4, fontPx: 12 },
   A5: { widthMm: 148, heightMm: 210, paddingMm: 10, fontPx: 14 },
   A4: { widthMm: 210, heightMm: 297, paddingMm: 14, fontPx: 16 },

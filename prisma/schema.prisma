@@ -149,7 +149,8 @@ model SystemSettings {
   colorsLight        Json?
   colorsDark         Json?
   receiptPaperSize   String           @default("58mm")
-  bluetoothPrint     Boolean          @default(false)
+  /// "browser" | "thermer" | "escpos" — see src/lib/print-method.ts
+  printMethod        String           @default("browser")
   businessTypeId     String?
   activeBusinessType BusinessTypeDef? @relation(fields: [businessTypeId], references: [id], onDelete: SetNull)
   updatedAt          DateTime         @updatedAt

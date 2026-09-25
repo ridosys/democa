@@ -124,8 +124,15 @@ export async function InvoicePrintView({
             autoOpen={auto === "pdf"}
             paper={paper}
           />
-          <InvoicePrintButton label={uiT.common.printSavePdf} />
-          {settings.bluetoothPrint && <BluetoothPrintButton invoiceId={invoice.id} />}
+          <InvoicePrintButton
+            label={uiT.common.printSavePdf}
+            variant={settings.printMethod === "browser" ? "default" : "outline"}
+          />
+          <BluetoothPrintButton
+            invoiceId={invoice.id}
+            method={settings.printMethod}
+            variant="default"
+          />
         </div>
       </div>
 

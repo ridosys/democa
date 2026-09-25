@@ -5,7 +5,7 @@ import { getSystemSettings } from "@/features/settings/queries";
 import { AppearanceForm } from "@/features/settings/components/appearance-form";
 import { CompanyLogoForm } from "@/features/settings/components/company-logo-form";
 import { ReceiptPaperForm } from "@/features/settings/components/receipt-paper-form";
-import { BluetoothPrintForm } from "@/features/settings/components/bluetooth-print-form";
+import { PrintMethodForm } from "@/features/settings/components/print-method-form";
 import { requirePageAccess } from "@/lib/permissions";
 import { getDictionary } from "@/i18n/server";
 
@@ -33,7 +33,7 @@ export default async function AppearancePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <ReceiptPaperForm paper={settings.receiptPaperSize} />
-          <BluetoothPrintForm enabled={settings.bluetoothPrint} />
+          <PrintMethodForm method={settings.printMethod} />
         </CardContent>
       </Card>
       <Card>
