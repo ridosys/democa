@@ -2,12 +2,22 @@ import { notFound } from "next/navigation";
 import { getPurchaseOrderById } from "@/features/purchases/queries";
 import { InvoicePrintButton } from "@/features/invoices/components/invoice-print-button";
 import { InvoicePdfButton } from "@/features/invoices/components/invoice-pdf-button";
+import { InvoiceLangSwitcher } from "@/features/invoices/components/invoice-lang-switcher";
 import { BackButton } from "@/components/shared/back-button";
 import { DocumentLogo } from "@/components/shared/document-logo";
+import { ReceiptPaper } from "@/components/shared/receipt-paper";
+import { ReceiptPaperSwitcher } from "@/components/shared/receipt-paper-switcher";
+import { ReceiptTextSizeSwitcher } from "@/components/shared/receipt-text-size-switcher";
 import { getSystemSettings } from "@/features/settings/queries";
 import { requirePageAccess } from "@/lib/permissions";
 import { getDictionary } from "@/i18n/server";
 import { CURRENCY_LABEL, formatCurrency } from "@/lib/currency";
+import { cn } from "@/lib/utils";
+import {
+  isThermalPaper,
+  resolveReceiptPaper,
+  resolveReceiptTextSize,
+} from "@/lib/receipt-paper";
 
 export const dynamic = "force-dynamic";
 
@@ -83,12 +93,12 @@ export default async function PurchaseOrderPrintPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ lang?: string }>;
+  searchParams: Promise<{ lang?: string; paper?: string; text?: string }>;
 }) {
   await requirePageAccess("PURCHASES_VIEW");
 
   const { id } = await params;
-  const { lang: langParam } = await searchParams;
+  const { lang: langParam, paper: paperParam, text } = await searchParams;
 
   const [order, uiT, settings] = await Promise.all([
     getPurchaseOrderById(id),
@@ -102,6 +112,18 @@ export default async function PurchaseOrderPrintPage({
     requestedLang === "en" || requestedLang === "fr" ? requestedLang : "ar";
   const t = LABELS[lang];
   const dir = lang === "ar" ? "rtl" : "ltr";
+  // Purchase invoices are A5 sheets unless another paper is picked here —
+  // the saved default paper in settings is meant for sales receipts.
+  const paper = resolveReceiptPaper(paperParam, "A5");
+  const textSize = resolveReceiptTextSize(text);
+  // Thermal rolls: header stacked and centred, thinner cell borders.
+  const narrow = isThermalPaper(paper);
+  const backHref = `/dashboard/purchases/${order.id}`;
+  const cell = cn(
+    "px-[0.4em] py-[0.3em] text-start align-top border-gray-400",
+    // Mid-word breaks only where the roll is too narrow for whole words.
+    narrow ? "border [overflow-wrap:anywhere]" : "border-2 break-words",
+  );
 
   const grandTotal = order.items.reduce(
     (sum, item) => sum + Number(item.unitCost) * Number(item.quantity),
@@ -114,153 +136,134 @@ export default async function PurchaseOrderPrintPage({
   );
 
   return (
-    <div
-      dir={dir}
-      className="mx-auto max-w-2xl space-y-6 p-6 print:max-w-none print:p-0"
-    >
-      <style>{"@page { size: A5; margin: 5mm; }"}</style>
-      <div className="flex items-center justify-between gap-2 print:hidden">
-        <BackButton fallbackHref={`/dashboard/purchases/${order.id}`} />
-        <div className="flex gap-2">
+    <div className="space-y-6 p-4 sm:p-6 print:p-0">
+      <div className="flex flex-wrap items-center justify-center gap-3 print:hidden">
+        <BackButton fallbackHref={backHref} />
+        <div className="hidden h-6 w-px bg-border sm:block" />
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <InvoiceLangSwitcher lang={lang} />
+          <ReceiptPaperSwitcher paper={paper} />
+          <ReceiptTextSizeSwitcher size={textSize} />
           <InvoicePdfButton
             targetId="purchase-order-card"
             fileName={`${order.orderNumber}.pdf`}
             label={uiT.common.openPdf}
+            paper={paper}
           />
-          <InvoicePrintButton label={uiT.common.printSavePdf} />
+          <InvoicePrintButton label={uiT.common.printSavePdf} backHref={backHref} />
         </div>
       </div>
 
-      <div
-        id="purchase-order-card"
-        className="rounded-xl border bg-card p-8 print:rounded-none print:border-none print:p-0"
-      >
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr>
-              <th colSpan={4} className="border-none p-0 pb-6 text-start font-normal print:pb-4">
-                <div className="flex items-start justify-between">
-                  <div>
+      <div className="overflow-x-auto pb-2 print:overflow-visible print:pb-0">
+        <ReceiptPaper id="purchase-order-card" paper={paper} textSize={textSize} dir={dir}>
+          <table className="w-full border-collapse">
+            <thead>
+              <tr>
+                <th colSpan={4} className="border-none p-0 pb-[1.2em] text-start font-normal">
+                  <div
+                    className={cn(
+                      "flex gap-[0.8em]",
+                      narrow ? "flex-col items-center text-center" : "items-start justify-between",
+                    )}
+                  >
                     <DocumentLogo
                       logoUrl={settings.logoUrl}
                       name={settings.appName}
+                      imgClassName="h-[3.5em] w-auto max-w-[14em] object-contain"
+                      nameClassName="text-[1.6em] font-bold"
                     />
+                    <div className={narrow ? "text-center" : "text-end"}>
+                      <h2 className="text-[1.45em] leading-tight font-bold">{t.title}</h2>
+                      <p className="font-semibold">
+                        {t.orderNumber}:{" "}
+                        <span dir="ltr" className="[overflow-wrap:anywhere]">
+                          {order.orderNumber}
+                        </span>
+                      </p>
+                      <p className="font-semibold">
+                        {t.date}: {new Date(order.createdAt).toLocaleDateString("fr-FR")}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-end">
-                    <h2 className="text-xl font-bold print:text-base">
-                      {t.title}
-                    </h2>
-                    <p className="text-sm font-semibold text-foreground print:text-xs">
-                      {t.orderNumber}:{" "}
-                      <span dir="ltr">{order.orderNumber}</span>
-                    </p>
-                    <p className="text-sm font-semibold text-foreground print:text-xs">
-                      {t.date}:{" "}
-                      {new Date(order.createdAt).toLocaleDateString("fr-FR")}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="mt-6 print:mt-4">
-                  <p className="text-sm font-semibold text-foreground print:text-xs">
-                    {t.supplier}:
-                    <span className="font-bold mx-1.5">
-                      {order.supplier.name}
-                    </span>
-                  </p>
-                  {order.supplier.phone && (
-                    <p className="text-sm font-semibold text-foreground print:text-xs">
-                      {t.phone}: <span dir="ltr">{order.supplier.phone}</span>
+                  <div className="mt-[1em]">
+                    <p className="font-semibold">
+                      {t.supplier}:
+                      <span className="mx-[0.4em] font-bold">{order.supplier.name}</span>
                     </p>
-                  )}
-                </div>
-              </th>
-            </tr>
-            <tr className="border-b text-start">
-              <th className="px-3 py-2 text-start font-bold border-2 border-gray-400">
-                <span className="block truncate max-w-[10ch]">
-                  {t.quantity}
-                </span>
-              </th>
-              <th className="px-3 py-2 text-start font-bold border-2 border-gray-400">
-                <span className="block truncate max-w-[10ch]">{t.product}</span>
-              </th>
-              <th className="px-2 py-2 text-start font-bold border-2 border-gray-400">
-                <span className="block truncate max-w-[15ch]">
-                  {t.unitCost} {`(${CURRENCY_LABEL["fr"]})`}
-                </span>
-              </th>
-              <th className="px-2 py-2 text-start font-bold border-2 border-gray-400">
-                <span className="block truncate max-w-[18ch]">
-                  {t.lineTotal} {`(${CURRENCY_LABEL["fr"]})`}
-                </span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {order.items.map((item) => (
-              <tr key={item.id} className="border-b font-semibold text-foreground">
-                <td className="px-3 py-2 border-2 border-gray-400">
-                  <span className="block truncate max-w-[15ch]">
-                    {Number(item.quantity)}
-                  </span>
-                </td>
-                <td className="px-3 py-2 border-2 border-gray-400">
-                  <span className="block truncate max-w-[18ch]">
-                    {item.product.name}
-                  </span>
-                </td>
-                <td className="px-3 py-2 border-2 border-gray-400">
-                  <span className="block truncate max-w-[15ch]">
+                    {order.supplier.phone && (
+                      <p className="font-semibold">
+                        {t.phone}: <span dir="ltr">{order.supplier.phone}</span>
+                      </p>
+                    )}
+                  </div>
+                </th>
+              </tr>
+              <tr className="font-bold">
+                <th className={cell}>{t.quantity}</th>
+                <th className={cell}>{t.product}</th>
+                <th className={cell}>
+                  {t.unitCost} ({CURRENCY_LABEL["fr"]})
+                </th>
+                <th className={cell}>
+                  {t.lineTotal} ({CURRENCY_LABEL["fr"]})
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {order.items.map((item) => (
+                <tr key={item.id} className="font-semibold">
+                  <td className={cell}>{Number(item.quantity)}</td>
+                  <td className={cell}>{item.product.name}</td>
+                  <td className={cn(cell, "whitespace-nowrap")}>
                     {formatCurrency(Number(item.unitCost), lang, true, 4)}
-                  </span>
-                </td>
-                <td className="px-3 py-2 border-2 border-gray-400">
-                  <span className="block truncate max-w-[15ch]">
+                  </td>
+                  <td className={cn(cell, "whitespace-nowrap")}>
                     {formatCurrency(
                       Number(item.unitCost) * Number(item.quantity),
                       lang,
                       true,
                     )}
-                  </span>
-                </td>
-              </tr>
-            ))}
-            <tr>
-              <td colSpan={4} className="border-none p-0 pt-5 print:pt-3">
-                <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-t-2 border-gray-400 pt-3 text-sm font-semibold text-foreground print:pt-2 print:text-xs">
-                  <p>
-                    {t.itemsCount}: <span className="font-bold">{itemsCount}</span>
-                  </p>
-                  <p>
-                    {t.totalWeight}:{" "}
-                    <span className="font-bold" dir="ltr">
-                      {totalWeight.toFixed(2)} kg
-                    </span>
-                  </p>
-                </div>
-
-                <div className="mt-3 flex items-center justify-between rounded-md border-2 border-gray-400 bg-gray-100 px-4 py-2 print:mt-2 print:py-1.5 print:[print-color-adjust:exact] print:[-webkit-print-color-adjust:exact]">
-                  <p className="text-base font-bold print:text-sm">
-                    {t.total}
-                  </p>
-                  <p className="text-lg font-bold print:text-base">
-                    {formatCurrency(grandTotal, lang, false)}
-                  </p>
-                </div>
-
-                <div className="flex justify-start pt-8 print:break-inside-avoid">
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="size-32 rounded-md border border-gray-300" />
-                    <p className="text-sm font-semibold text-foreground">
-                      {t.supplierSignature}
+                  </td>
+                </tr>
+              ))}
+              <tr>
+                <td colSpan={4} className="border-none p-0 pt-[1em]">
+                  <div className="flex flex-wrap items-center justify-between gap-x-[1.5em] gap-y-[0.2em] border-t-2 border-gray-400 pt-[0.6em] font-semibold">
+                    <p>
+                      {t.itemsCount}: <span className="font-bold">{itemsCount}</span>
+                    </p>
+                    <p>
+                      {t.totalWeight}:{" "}
+                      <span className="font-bold" dir="ltr">
+                        {totalWeight.toFixed(2)} kg
+                      </span>
                     </p>
                   </div>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+
+                  <div className="mt-[0.6em] flex flex-wrap items-center justify-between gap-x-[1em] rounded-md border-2 border-gray-400 bg-gray-100 px-[0.8em] py-[0.4em] [print-color-adjust:exact] [-webkit-print-color-adjust:exact]">
+                    <p className="text-[1.1em] font-bold">{t.total}</p>
+                    <p className="ms-auto text-[1.25em] font-bold whitespace-nowrap">
+                      {formatCurrency(grandTotal, lang, false)}
+                    </p>
+                  </div>
+
+                  <div
+                    className={cn(
+                      "flex pt-[1.8em] break-inside-avoid",
+                      narrow ? "justify-center" : "justify-start",
+                    )}
+                  >
+                    <div className="flex flex-col items-center gap-[0.5em]">
+                      <div className="size-[9em] rounded-md border border-gray-300" />
+                      <p className="font-semibold">{t.supplierSignature}</p>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </ReceiptPaper>
       </div>
     </div>
   );
