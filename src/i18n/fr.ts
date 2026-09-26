@@ -805,6 +805,12 @@ export const fr = {
       remainingTotal: "Reste",
       fileName: "facture-serveur",
       thankYou: "Merci pour votre confiance !",
+      subtitle: "Récapitulatif des ventes par serveur",
+      timeHeading: "Heure",
+      paymentSection: "Récapitulatif des paiements",
+      totalOrders: "Total des commandes",
+      totalProducts: "Total des produits",
+      totalAmount: "Montant total",
     },
     photo: {
       title: "Photo du serveur",
@@ -1704,6 +1710,27 @@ export const fr = {
       paperLabel: "Format du papier",
       textSizeLabel: "Taille du texte",
       textSizeNormal: "normale",
+      defaultTextSizeLabel: "Taille du texte par défaut",
+      languageLabel: "Langue par défaut",
+      languageDescription:
+        "Langue dans laquelle s'ouvrent les documents imprimés. Vous pouvez toujours la changer sur la page d'impression.",
+      languageOptions: {
+        auto: "Automatique (langue propre à chaque document)",
+        ar: "العربية",
+        fr: "Français",
+        en: "English",
+      },
+      stylesTitle: "Styles de facture",
+      stylesDescription:
+        "Le design utilisé pour tous les documents imprimés : factures de vente, factures d'achat et factures journalières des serveurs.",
+      styleUse: "Utiliser ce design",
+      styleCurrent: "Design actuel",
+      stylePreviewHint: "Cliquez sur un design pour le voir en entier.",
+      styleNames: {
+        classic: "Classique",
+        bold: "Titres en gras",
+        icons: "Icônes",
+      },
       toastUpdated: "Paramètres d'impression enregistrés",
       options: {
         "58mm": "Thermique 58mm",

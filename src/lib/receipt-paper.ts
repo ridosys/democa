@@ -22,6 +22,11 @@ export type ReceiptPaperSize = (typeof RECEIPT_PAPER_SIZES)[number];
 
 export const DEFAULT_RECEIPT_PAPER: ReceiptPaperSize = "58mm";
 
+// Receipt-printer look: a monospace face for Latin text. Arabic falls back
+// to the app's sans font — monospace Arabic glyphs render poorly.
+export const RECEIPT_MONO_FONT =
+  '"DejaVu Sans Mono", "Menlo", "Consolas", "Liberation Mono", "Courier New", monospace';
+
 export type ReceiptPaperSpec = {
   /** Sheet / roll width. */
   widthMm: number;
@@ -77,7 +82,8 @@ export function receiptPrinterDots(paper: ReceiptPaperSize): number {
 
 /**
  * Text size of the printed receipt, in % of the paper's base font size —
- * picked per print on the print page (`?text=`).
+ * the default is set in Settings → Printing, and it can be picked per print
+ * on the print page (`?text=`).
  */
 export const RECEIPT_TEXT_SIZES = [80, 90, 100, 110, 120, 130, 140, 150, 175, 200] as const;
 
@@ -85,9 +91,13 @@ export type ReceiptTextSize = (typeof RECEIPT_TEXT_SIZES)[number];
 
 export const DEFAULT_RECEIPT_TEXT_SIZE: ReceiptTextSize = 100;
 
-export function resolveReceiptTextSize(value: unknown): ReceiptTextSize {
-  const number = typeof value === "string" ? Number(value) : value;
+/** `value` when it is a valid size, else `fallback` (the saved default). */
+export function resolveReceiptTextSize(
+  value: unknown,
+  fallback: ReceiptTextSize = DEFAULT_RECEIPT_TEXT_SIZE,
+): ReceiptTextSize {
+  const number = typeof value === "string" && value !== "" ? Number(value) : value;
   return (RECEIPT_TEXT_SIZES as readonly unknown[]).includes(number)
     ? (number as ReceiptTextSize)
-    : DEFAULT_RECEIPT_TEXT_SIZE;
+    : fallback;
 }

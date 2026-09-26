@@ -18,8 +18,15 @@ import {
 } from "@/lib/receipt-paper";
 
 /** Per-print text size via `?text=` (a % of the paper's base font size).
- * Keeps the other query params (lang, paper, …). */
-export function ReceiptTextSizeSwitcher({ size }: { size: ReceiptTextSize }) {
+ * Keeps the other query params (lang, paper, …). `defaultSize` is the one
+ * saved in settings — picking it drops the param. */
+export function ReceiptTextSizeSwitcher({
+  size,
+  defaultSize = DEFAULT_RECEIPT_TEXT_SIZE,
+}: {
+  size: ReceiptTextSize;
+  defaultSize?: ReceiptTextSize;
+}) {
   const t = useT();
   const tp = t.settings.printing;
   const router = useRouter();
@@ -28,7 +35,7 @@ export function ReceiptTextSizeSwitcher({ size }: { size: ReceiptTextSize }) {
 
   function select(option: ReceiptTextSize) {
     const params = new URLSearchParams(searchParams.toString());
-    if (option === DEFAULT_RECEIPT_TEXT_SIZE) params.delete("text");
+    if (option === defaultSize) params.delete("text");
     else params.set("text", String(option));
     params.delete("auto");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });

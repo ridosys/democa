@@ -16,8 +16,9 @@ import {
   MAX_LOGO_BYTES,
 } from "./logo";
 import { getDictionary } from "@/i18n/server";
-import { isReceiptPaperSize } from "@/lib/receipt-paper";
+import { isReceiptPaperSize, RECEIPT_TEXT_SIZES } from "@/lib/receipt-paper";
 import { isPrintMethod } from "@/lib/print-method";
+import { isReceiptLanguage, isReceiptStyle } from "@/lib/receipt-style";
 
 type ActionResult = { error?: string; success?: boolean };
 
@@ -98,6 +99,53 @@ export async function updatePrintMethod(method: unknown): Promise<ActionResult> 
 
   revalidatePath("/", "layout");
   return { success: true };
+}
+
+/** Save one print default on the settings row (creating the row if
+ * needed) — the value is validated by the caller. */
+async function savePrintSetting(
+  data:
+    | { receiptTextSize: number }
+    | { receiptLanguage: string | null }
+    | { receiptStyle: string },
+): Promise<ActionResult> {
+  const existing = await getSystemSettingsRow();
+  if (existing) {
+    await prisma.systemSettings.update({ where: { id: existing.id }, data });
+  } else {
+    await prisma.systemSettings.create({ data });
+  }
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+/** Default text size (%) printed documents open with. */
+export async function updateReceiptTextSize(size: unknown): Promise<ActionResult> {
+  const access = await requirePermission("SETTINGS_MANAGE");
+  if (!access.ok) return { error: access.error };
+  const t = await getDictionary();
+  if (typeof size !== "number" || !(RECEIPT_TEXT_SIZES as readonly number[]).includes(size)) {
+    return { error: t.settings.validationError };
+  }
+  return savePrintSetting({ receiptTextSize: size });
+}
+
+/** Default language printed documents open in ("auto" = their own). */
+export async function updateReceiptLanguage(language: unknown): Promise<ActionResult> {
+  const access = await requirePermission("SETTINGS_MANAGE");
+  if (!access.ok) return { error: access.error };
+  const t = await getDictionary();
+  if (!isReceiptLanguage(language)) return { error: t.settings.validationError };
+  return savePrintSetting({ receiptLanguage: language === "auto" ? null : language });
+}
+
+/** Look of every printed document (sales / purchase / waiter invoice). */
+export async function updateReceiptStyle(style: unknown): Promise<ActionResult> {
+  const access = await requirePermission("SETTINGS_MANAGE");
+  if (!access.ok) return { error: access.error };
+  const t = await getDictionary();
+  if (!isReceiptStyle(style)) return { error: t.settings.validationError };
+  return savePrintSetting({ receiptStyle: style });
 }
 
 /**

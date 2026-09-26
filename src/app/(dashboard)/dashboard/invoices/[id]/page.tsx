@@ -92,7 +92,7 @@ export default async function InvoiceEditPage({
               {t.invoices.viewPrintButton}
             </Button>
             <BluetoothPrintButton
-              invoiceId={invoice.id}
+              doc={{ kind: "invoice", id: invoice.id }}
               method={settings.printMethod}
               size="default"
             />

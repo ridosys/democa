@@ -6,6 +6,7 @@ import {
 import { printInvoiceReceipt } from "@/features/invoices/print-receipt";
 import type { Dictionary } from "@/i18n/dictionaries";
 import type { PrintMethod, ReceiptPrintOptions } from "@/lib/print-method";
+import type { PrintDocRef } from "@/lib/print-document";
 
 /** Thermer / Bluetooth Print app's Browser Print URL scheme. */
 export const BLUETOOTH_PRINT_SCHEME = "my.bluetoothprint.scheme://";
@@ -51,20 +52,21 @@ function launchApp(url: string, notInstalled: string): Promise<boolean> {
 }
 
 /**
- * Sends one invoice to the thermal printer through the Thermer / Bluetooth
- * Print app: fetches a signed, short-lived response URL for it, then opens
+ * Sends one document (invoice, purchase invoice, waiter report) to the
+ * thermal printer through the Thermer / Bluetooth Print app: fetches a
+ * signed, short-lived response URL for it, then opens
  * `my.bluetoothprint.scheme://<response URL>`; the app downloads the receipt
  * JSON from that URL and prints it. Resolves true once the app opened,
  * false (after a toast) on failure.
  */
-export async function bluetoothPrintInvoice(
-  invoiceId: string,
+export async function bluetoothPrintDocument(
+  doc: PrintDocRef,
   messages: BluetoothPrintMessages,
   options?: ReceiptPrintOptions,
 ): Promise<boolean> {
   let result: Awaited<ReturnType<typeof createBluetoothPrintLink>>;
   try {
-    result = await createBluetoothPrintLink(invoiceId, options);
+    result = await createBluetoothPrintLink(doc, options);
   } catch {
     toast.error(messages.linkError);
     return false;
@@ -79,19 +81,19 @@ export async function bluetoothPrintInvoice(
 }
 
 /**
- * Prints one invoice straight on the default printer of the "Open ESC/POS
+ * Prints one document straight on the default printer of the "Open ESC/POS
  * Print Service" app, through its `print-intent` intent (the receipt HTML
  * is inside the intent URL). Resolves true once the app opened, false
  * (after a toast) on failure.
  */
-export async function escposPrintInvoice(
-  invoiceId: string,
+export async function escposPrintDocument(
+  doc: PrintDocRef,
   messages: PrinterAppMessages["escposPrint"],
   options?: ReceiptPrintOptions,
 ): Promise<boolean> {
   let result: Awaited<ReturnType<typeof createEscposPrintIntent>>;
   try {
-    result = await createEscposPrintIntent(invoiceId, options);
+    result = await createEscposPrintIntent(doc, options);
   } catch {
     toast.error(messages.buildError);
     return false;
@@ -110,8 +112,9 @@ export function printInvoiceWith(
   invoiceId: string,
   messages: PrinterAppMessages,
 ) {
-  if (method === "escpos") void escposPrintInvoice(invoiceId, messages.escposPrint);
-  else if (method === "thermer") void bluetoothPrintInvoice(invoiceId, messages.bluetoothPrint);
+  const doc: PrintDocRef = { kind: "invoice", id: invoiceId };
+  if (method === "escpos") void escposPrintDocument(doc, messages.escposPrint);
+  else if (method === "thermer") void bluetoothPrintDocument(doc, messages.bluetoothPrint);
   else printInvoiceReceipt(invoiceId);
 }
 

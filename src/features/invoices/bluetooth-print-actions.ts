@@ -1,20 +1,19 @@
 "use server";
 
 import { gzipSync } from "node:zlib";
-import { prisma } from "@/lib/prisma";
-import { hasAnyPermission } from "@/lib/permissions";
-import { createInvoicePrintToken } from "@/lib/print-token";
+import { createPrintToken } from "@/lib/print-token";
+import { parsePrintDocRef, printDocSubject } from "@/lib/print-document";
 import { getSystemSettings } from "@/features/settings/queries";
-import { getInvoiceById } from "@/features/invoices/queries";
-import { buildReceiptLines } from "@/features/invoices/bluetooth-receipt";
+import {
+  buildDocumentReceipt,
+  canPrintDocument,
+} from "@/features/print/receipt-documents";
 import {
   buildEscposReceiptHtml,
   receiptLogoDataUri,
 } from "@/features/invoices/escpos-receipt";
 import { getDictionary } from "@/i18n/server";
 import type { ReceiptPrintOptions } from "@/lib/print-method";
-
-const INVOICE_ID = /^[a-z0-9]{10,40}$/i;
 
 const ESCPOS_PACKAGE = "com.farminos.print";
 
@@ -32,67 +31,69 @@ function asciiJson(value: unknown): string {
   );
 }
 
+/**
+ * Signed, short-lived response URL of one document (invoice, purchase
+ * invoice or waiter daily report) for the Thermer app. `doc` is a
+ * PrintDocRef, validated here.
+ */
 export async function createBluetoothPrintLink(
-  invoiceId: unknown,
+  doc: unknown,
   options: ReceiptPrintOptions = {},
 ): Promise<{ path: string } | { error: string }> {
   const t = await getDictionary();
-  if (!(await hasAnyPermission(["POS_VIEW", "INVOICES_VIEW"]))) {
+  const ref = parsePrintDocRef(doc);
+  if (!ref) return { error: t.bluetoothPrint.linkError };
+  if (!(await canPrintDocument(ref))) {
     return { error: t.common.insufficientPermissionError };
   }
-  if (typeof invoiceId !== "string" || !INVOICE_ID.test(invoiceId)) {
-    return { error: t.bluetoothPrint.linkError };
+
+  const settings = await getSystemSettings();
+  if (settings.printMethod !== "thermer") return { error: t.bluetoothPrint.disabledError };
+  const built = await buildDocumentReceipt(ref, settings, options);
+  if (!built.ok) {
+    return {
+      error: built.reason === "notFound" ? t.bluetoothPrint.notFoundError : t.bluetoothPrint.linkError,
+    };
   }
 
-  const [settings, invoice] = await Promise.all([
-    getSystemSettings(),
-    prisma.invoice.findUnique({
-      where: { id: invoiceId },
-      select: { id: true },
-    }),
-  ]);
-  if (settings.printMethod !== "thermer")
-    return { error: t.bluetoothPrint.disabledError };
-  if (!invoice) return { error: t.bluetoothPrint.notFoundError };
-
-  // lang / paper are only display choices (validated by the endpoint); the
-  // token alone grants access, to this one invoice.
-  const query = new URLSearchParams({ token: createInvoicePrintToken(invoice.id) });
+  // lang / paper / text are only display choices (validated by the
+  // endpoint); the token alone grants access, to this one document.
+  const query = new URLSearchParams({ token: createPrintToken(printDocSubject(ref)) });
+  if (ref.date) query.set("date", ref.date);
   if (typeof options.lang === "string") query.set("lang", options.lang);
   if (typeof options.paper === "string") query.set("paper", options.paper);
   if (typeof options.textSize === "string") query.set("text", options.textSize);
-  return { path: `/api/print/invoice/${encodeURIComponent(invoice.id)}?${query}` };
+  return { path: `/api/print/${ref.kind}/${encodeURIComponent(ref.id)}?${query}` };
 }
 
 /**
  * Builds the `intent://` URL that makes the "Open ESC/POS Print Service"
- * app print one invoice on its default printer, without Android's printer
+ * app print one document on its default printer, without Android's printer
  * picker. The receipt HTML travels inside the intent itself (a base64,
  * gzipped JSON array of HTML pages — the app's documented format), so the
  * app never calls back to this server and needs no token.
  */
 export async function createEscposPrintIntent(
-  invoiceId: unknown,
+  doc: unknown,
   options: ReceiptPrintOptions = {},
 ): Promise<{ url: string } | { error: string }> {
   const t = await getDictionary();
-  if (!(await hasAnyPermission(["POS_VIEW", "INVOICES_VIEW"]))) {
+  const ref = parsePrintDocRef(doc);
+  if (!ref) return { error: t.escposPrint.buildError };
+  if (!(await canPrintDocument(ref))) {
     return { error: t.common.insufficientPermissionError };
   }
-  if (typeof invoiceId !== "string" || !INVOICE_ID.test(invoiceId)) {
-    return { error: t.escposPrint.buildError };
+
+  const settings = await getSystemSettings();
+  if (settings.printMethod !== "escpos") return { error: t.escposPrint.disabledError };
+  const built = await buildDocumentReceipt(ref, settings, options);
+  if (!built.ok) {
+    return {
+      error: built.reason === "notFound" ? t.escposPrint.notFoundError : t.escposPrint.buildError,
+    };
   }
 
-  const [settings, invoice] = await Promise.all([
-    getSystemSettings(),
-    getInvoiceById(invoiceId),
-  ]);
-  if (settings.printMethod !== "escpos")
-    return { error: t.escposPrint.disabledError };
-  if (!invoice) return { error: t.escposPrint.notFoundError };
-  if (invoice.items.length === 0) return { error: t.escposPrint.buildError };
-
-  const { lines, dir, paper, textSize } = buildReceiptLines(invoice, settings, options);
+  const { lines, dir, paper, textSize } = built.receipt;
   const html = buildEscposReceiptHtml({
     lines,
     dir,

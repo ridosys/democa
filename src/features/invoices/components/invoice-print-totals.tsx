@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/currency";
-import { ReceiptLine, ReceiptRule } from "@/components/shared/receipt-parts";
+import { InvoiceTotalsLines } from "@/features/invoices/components/invoice-totals-lines";
+import type { ReceiptStyle } from "@/lib/receipt-style";
 import { PaymentStatusBadge } from "@/features/invoices/components/payment-status-badge";
 import type { PaymentStatus } from "@/generated/prisma/client";
 
@@ -59,6 +60,7 @@ export function InvoicePrintTotals({
   previousPayment,
   showPreviousPayment,
   otherOutstandingInvoices,
+  style = "classic",
 }: {
   lang: "ar" | "en" | "fr";
   controlsSlotId: string;
@@ -81,6 +83,8 @@ export function InvoicePrintTotals({
   previousPayment: number;
   showPreviousPayment: boolean;
   otherOutstandingInvoices: OtherOutstandingInvoice[];
+  /** Look of the printed totals (Settings → Printing). */
+  style?: ReceiptStyle;
 }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     () => new Set(otherOutstandingInvoices.map((invoice) => invoice.id)),
@@ -289,31 +293,15 @@ export function InvoicePrintTotals({
     <>
       {controlsSlot && createPortal(controls, controlsSlot)}
 
-      <ReceiptLine
-        className="mt-[0.3em]"
-        label={`${labels.total}:`}
-        value={formatCurrency(itemsTotal, lang, false)}
+      <InvoiceTotalsLines
+        style={style}
+        lang={lang}
+        labels={labels}
+        itemsTotal={itemsTotal}
+        previousPayment={showPreviousPayment ? previousPayment : null}
+        previousDebts={includesOldAccount && hasOldAccount ? selectedDebtsTotal : null}
+        grandTotal={grandTotal}
       />
-      {showPreviousPayment && (
-        <ReceiptLine
-          label={`${labels.previousPayment}:`}
-          value={formatCurrency(previousPayment, lang, false)}
-        />
-      )}
-      {includesOldAccount && hasOldAccount && (
-        <ReceiptLine
-          label={`${labels.previousDebts}:`}
-          value={formatCurrency(selectedDebtsTotal, lang, false)}
-        />
-      )}
-
-      <ReceiptRule />
-      <ReceiptLine
-        className="text-[1.5em] leading-tight font-bold"
-        label={labels.grandTotal}
-        value={formatCurrency(grandTotal, lang, false)}
-      />
-      <ReceiptRule />
     </>
   );
 }

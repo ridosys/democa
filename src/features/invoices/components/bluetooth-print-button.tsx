@@ -5,19 +5,21 @@ import { Bluetooth, Loader2, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGoBack } from "@/components/shared/back-button";
 import {
-  bluetoothPrintInvoice,
-  escposPrintInvoice,
+  bluetoothPrintDocument,
+  escposPrintDocument,
 } from "@/features/invoices/bluetooth-print";
 import { useT } from "@/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 import { waitUntilPageReturns } from "@/lib/page-return";
 import type { PrintMethod, ReceiptPrintOptions } from "@/lib/print-method";
+import type { PrintDocRef } from "@/lib/print-document";
 
-/** Prints an invoice straight on the Android printer app chosen in
+/** Prints a document (invoice, purchase invoice, waiter report) straight
+ * on the Android printer app chosen in
  * settings (Thermer or Open ESC/POS Print Service). Renders nothing when
  * receipts are printed with the browser dialog. */
 export function BluetoothPrintButton({
-  invoiceId,
+  doc,
   method,
   size = "sm",
   variant = "outline",
@@ -25,7 +27,7 @@ export function BluetoothPrintButton({
   options,
   backHref,
 }: {
-  invoiceId: string;
+  doc: PrintDocRef;
   method: PrintMethod;
   /** Language / paper shown on the print page, printed the same way. */
   options?: ReceiptPrintOptions;
@@ -53,8 +55,8 @@ export function BluetoothPrintButton({
         startTransition(async () => {
           const opened =
             method === "escpos"
-              ? await escposPrintInvoice(invoiceId, t.escposPrint, options)
-              : await bluetoothPrintInvoice(invoiceId, t.bluetoothPrint, options);
+              ? await escposPrintDocument(doc, t.escposPrint, options)
+              : await bluetoothPrintDocument(doc, t.bluetoothPrint, options);
           if (opened && backHref) {
             await waitUntilPageReturns(0);
             goBack();

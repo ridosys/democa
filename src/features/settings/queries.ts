@@ -5,8 +5,15 @@ import { companyConfig } from "@/config/company";
 import type { ColorTokens } from "./schema";
 import {
   resolveReceiptPaper,
+  resolveReceiptTextSize,
   type ReceiptPaperSize,
+  type ReceiptTextSize,
 } from "@/lib/receipt-paper";
+import {
+  resolveReceiptLanguage,
+  resolveReceiptStyle,
+  type ReceiptStyle,
+} from "@/lib/receipt-style";
 import { resolvePrintMethod, type PrintMethod } from "@/lib/print-method";
 
 export type SystemSettingsData = {
@@ -20,6 +27,12 @@ export type SystemSettingsData = {
   receiptPaperSize: ReceiptPaperSize;
   /** How receipts are printed: browser dialog, Thermer app or ESC/POS service. */
   printMethod: PrintMethod;
+  /** Default text size of printed documents (%). */
+  receiptTextSize: ReceiptTextSize;
+  /** Default language of printed documents; null = each document's own. */
+  receiptLanguage: "ar" | "fr" | "en" | null;
+  /** Look of every printed document (sales / purchase / waiter invoice). */
+  receiptStyle: ReceiptStyle;
 };
 
 function mergeColors(base: ColorTokens, override: unknown): ColorTokens {
@@ -38,6 +51,9 @@ export const getSystemSettings = cache(
       colorsDark: mergeColors(companyConfig.colors.dark, row?.colorsDark),
       receiptPaperSize: resolveReceiptPaper(undefined, row?.receiptPaperSize),
       printMethod: resolvePrintMethod(row?.printMethod),
+      receiptTextSize: resolveReceiptTextSize(row?.receiptTextSize),
+      receiptLanguage: resolveReceiptLanguage(row?.receiptLanguage),
+      receiptStyle: resolveReceiptStyle(row?.receiptStyle),
     };
   },
 );

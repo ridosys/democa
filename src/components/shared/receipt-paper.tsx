@@ -4,17 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_RECEIPT_TEXT_SIZE,
+  RECEIPT_MONO_FONT,
   RECEIPT_PAPER_SPECS,
   type ReceiptPaperSize,
   type ReceiptTextSize,
 } from "@/lib/receipt-paper";
 
 const PX_PER_MM = 96 / 25.4;
-
-// Receipt-printer look: a monospace face for Latin text. Arabic falls back
-// to the app's sans font — monospace Arabic glyphs render poorly.
-const MONO_FONT =
-  '"DejaVu Sans Mono", "Menlo", "Consolas", "Liberation Mono", "Courier New", monospace';
 
 /**
  * The printable sheet for receipts. Sized in real millimetres so what is on
@@ -83,7 +79,7 @@ export function ReceiptPaper({
           padding: `${spec.paddingMm}mm`,
           fontSize: `${(spec.fontPx * textSize) / 100}px`,
           lineHeight: 1.35,
-          fontFamily: dir === "rtl" ? undefined : MONO_FONT,
+          fontFamily: dir === "rtl" ? undefined : RECEIPT_MONO_FONT,
         }}
       >
         {children}

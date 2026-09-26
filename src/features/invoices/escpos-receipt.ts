@@ -108,11 +108,13 @@ export function buildEscposReceiptHtml({
         case "text":
           return `<div>${escapeHtml(line.text)}</div>`;
         case "row":
-          return row(line.left, line.right, line.bold ? "bold" : "");
+          return row(line.left, line.right, line.bold ? "bold" : "", line.ltr);
         case "item":
           return `<div class="bold">${escapeHtml(line.name)}</div>${row(line.detail, line.total, "small", true)}`;
         case "total":
           return row(line.label, line.value, "bold total");
+        case "section":
+          return `<div class="section${line.inverse ? " inverse" : ""}">${escapeHtml(line.text)}</div>`;
         case "rule":
           return `<div class="rule"></div>`;
       }
@@ -134,6 +136,8 @@ body { font-family: sans-serif; font-size: ${base}vw; line-height: 1.35; padding
 .small { font-size: 0.92em; }
 .total { font-size: 1.3em; }
 .rule { border-top: 0.6vw dashed #000; margin: 1.6vw 0; }
+.section { font-size: 1.1em; font-weight: bold; margin: 1.2vw 0 0.8vw; }
+.section.inverse { background: #000; color: #fff; padding: 0.4vw 2vw; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .feed { height: 12vw; }`;
 
   return (

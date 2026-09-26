@@ -776,6 +776,12 @@ export const ar = {
       remainingTotal: "المتبقي",
       fileName: "فاتورة-النادل",
       thankYou: "شكراً لتعاملكم معنا",
+      subtitle: "ملخص المبيعات حسب النادل",
+      timeHeading: "الوقت",
+      paymentSection: "ملخص الدفع",
+      totalOrders: "مجموع الطلبات",
+      totalProducts: "مجموع المنتجات",
+      totalAmount: "المبلغ الإجمالي",
     },
     photo: {
       title: "صورة النادل",
@@ -1624,6 +1630,27 @@ export const ar = {
       paperLabel: "حجم الورق",
       textSizeLabel: "حجم الخط",
       textSizeNormal: "عادي",
+      defaultTextSizeLabel: "حجم النص الافتراضي",
+      languageLabel: "اللغة الافتراضية",
+      languageDescription:
+        "اللغة التي تُفتح بها المستندات المطبوعة. يمكنك دائماً تغييرها في صفحة الطباعة.",
+      languageOptions: {
+        auto: "تلقائي (لغة كل مستند)",
+        ar: "العربية",
+        fr: "Français",
+        en: "English",
+      },
+      stylesTitle: "أنماط الفواتير",
+      stylesDescription:
+        "التصميم المستعمل في كل المستندات المطبوعة: فواتير البيع، فواتير الشراء وفواتير النادل اليومية.",
+      styleUse: "استعمال هذا التصميم",
+      styleCurrent: "التصميم الحالي",
+      stylePreviewHint: "انقر على تصميم لرؤيته كاملاً.",
+      styleNames: {
+        classic: "كلاسيكي",
+        bold: "عناوين بارزة",
+        icons: "أيقونات",
+      },
       toastUpdated: "تم حفظ إعدادات الطباعة",
       options: {
         "58mm": "حراري 58mm",

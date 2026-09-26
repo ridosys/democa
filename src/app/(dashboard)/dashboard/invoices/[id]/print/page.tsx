@@ -24,7 +24,7 @@ export default async function InvoicePrintPage({
   const data = await loadInvoicePrintData(id);
   if (!data) notFound();
 
-  const lang = resolveInvoiceLang(langParam, data.invoice.language);
+  const lang = resolveInvoiceLang(langParam, data.settings.receiptLanguage ?? data.invoice.language);
   const paper = resolveReceiptPaper(paperParam, data.settings.receiptPaperSize);
 
   return (
@@ -34,7 +34,7 @@ export default async function InvoicePrintPage({
       otherOutstandingInvoices={data.otherOutstandingInvoices}
       lang={lang}
       paper={paper}
-      textSize={resolveReceiptTextSize(text)}
+      textSize={resolveReceiptTextSize(text, data.settings.receiptTextSize)}
       auto={auto}
       backHref={`/dashboard/invoices/${data.invoice.id}`}
     />

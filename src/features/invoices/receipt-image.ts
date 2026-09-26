@@ -35,7 +35,8 @@ function registerFonts() {
 type Dir = "rtl" | "ltr";
 type Align = "start" | "end" | "center";
 type Op =
-  | { kind: "text"; text: string; y: number; size: number; bold: boolean; align: Align; dir: Dir }
+  | { kind: "text"; text: string; y: number; size: number; bold: boolean; align: Align; dir: Dir; color?: string }
+  | { kind: "band"; y: number; height: number }
   | { kind: "rule"; y: number };
 
 const PADDING = 8;
@@ -96,18 +97,18 @@ function layout(
   };
   /** Label on the start side, value on the end side of the same line —
    * or the value on a line of its own when both don't fit (large text). */
-  const row = (label: string, value: string, size: number, bold: boolean) => {
+  const row = (label: string, value: string, size: number, bold: boolean, labelDir: Dir = dir) => {
     ctx.font = font(size, bold);
     const valueWidth = ctx.measureText(value).width;
     const room = inner - valueWidth - GAP;
     if (ctx.measureText(label).width > room && room < inner / 2) {
-      for (const part of wrap(ctx, label, inner)) pushText(part, size, bold, "start", dir);
+      for (const part of wrap(ctx, label, inner)) pushText(part, size, bold, "start", labelDir);
       pushText(value, size, bold, "end", dir);
       return;
     }
     const labelParts = wrap(ctx, label, Math.max(inner / 3, room));
     ops.push({ kind: "text", text: value, y, size, bold, align: "end", dir });
-    for (const part of labelParts) pushText(part, size, bold, "start", dir);
+    for (const part of labelParts) pushText(part, size, bold, "start", labelDir);
   };
 
   for (const line of lines) {
@@ -122,7 +123,7 @@ function layout(
         wrapped(line.text, base, false, "start", dir);
         break;
       case "row":
-        row(line.left, line.right, base, Boolean(line.bold));
+        row(line.left, line.right, base, Boolean(line.bold), line.ltr ? "ltr" : dir);
         break;
       case "item": {
         wrapped(line.name, base, true, "start", dir);
@@ -136,6 +137,25 @@ function layout(
       case "total":
         row(line.label, line.value, Math.round(base * 1.3), true);
         break;
+      case "section": {
+        const size = Math.round(base * 1.1);
+        y += Math.round(base * 0.3);
+        if (line.inverse) {
+          ctx.font = font(size, true);
+          const parts = wrap(ctx, line.text, inner - 16);
+          const height = parts.length * Math.round(size * LINE_HEIGHT) + 4;
+          ops.push({ kind: "band", y, height });
+          y += 2;
+          for (const part of parts) {
+            ops.push({ kind: "text", text: part, y, size, bold: true, align: "start", dir, color: "#fff" });
+            y += Math.round(size * LINE_HEIGHT);
+          }
+          y += 2 + Math.round(base * 0.2);
+        } else {
+          wrapped(line.text, size, true, "start", dir);
+        }
+        break;
+      }
       case "rule":
         y += Math.round(base * 0.4);
         ops.push({ kind: "rule", y });
@@ -187,6 +207,12 @@ export function renderReceiptImage(
       ctx.setLineDash([]);
       continue;
     }
+    if (op.kind === "band") {
+      ctx.fillStyle = "#000";
+      ctx.fillRect(PADDING, op.y, width - PADDING * 2, op.height);
+      continue;
+    }
+    ctx.fillStyle = op.color ?? "#000";
     ctx.font = font(op.size, op.bold);
     ctx.direction = op.dir;
     if (op.align === "center") {
@@ -194,7 +220,9 @@ export function renderReceiptImage(
       ctx.fillText(op.text, width / 2, op.y);
     } else if (op.align === "start") {
       ctx.textAlign = startAlign;
-      ctx.fillText(op.text, startX, op.y);
+      // Text on a black band sits a little in from its edge.
+      const inset = op.color ? (dir === "rtl" ? -8 : 8) : 0;
+      ctx.fillText(op.text, startX + inset, op.y);
     } else {
       ctx.textAlign = endAlign;
       ctx.fillText(op.text, endX, op.y);

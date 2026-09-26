@@ -39,6 +39,9 @@ export const INVOICE_PRINT_LABELS: Record<
     totalWeight: string;
     thankYou: string;
     walkInCustomer: string;
+    itemsSection: string;
+    paymentSection: string;
+    customerSection: string;
   }
 > = {
   ar: {
@@ -68,6 +71,9 @@ export const INVOICE_PRINT_LABELS: Record<
     totalWeight: "الوزن الإجمالي (kg)",
     thankYou: "شكراً لتعاملكم معنا",
     walkInCustomer: "زبون مباشر",
+    itemsSection: "المنتجات",
+    paymentSection: "الدفع",
+    customerSection: "الزبون",
   },
   fr: {
     title: "Facture",
@@ -96,6 +102,9 @@ export const INVOICE_PRINT_LABELS: Record<
     totalWeight: "Poids total (kg)",
     thankYou: "Merci pour votre confiance !",
     walkInCustomer: "Client de passage",
+    itemsSection: "Articles",
+    paymentSection: "Paiement",
+    customerSection: "Client",
   },
   en: {
     title: "Invoice",
@@ -124,5 +133,8 @@ export const INVOICE_PRINT_LABELS: Record<
     totalWeight: "Total weight (kg)",
     thankYou: "Thank you for your business!",
     walkInCustomer: "Walk-in",
+    itemsSection: "Items",
+    paymentSection: "Payment",
+    customerSection: "Customer",
   },
 };

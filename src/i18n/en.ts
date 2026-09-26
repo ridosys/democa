@@ -789,6 +789,12 @@ export const en = {
       remainingTotal: "Remaining",
       fileName: "waiter-invoice",
       thankYou: "Thank you for your business!",
+      subtitle: "Sales summary by waiter",
+      timeHeading: "Time",
+      paymentSection: "Payment summary",
+      totalOrders: "Total orders",
+      totalProducts: "Total products",
+      totalAmount: "Total amount",
     },
     photo: {
       title: "Waiter photo",
@@ -1663,6 +1669,27 @@ export const en = {
       paperLabel: "Paper size",
       textSizeLabel: "Text size",
       textSizeNormal: "normal",
+      defaultTextSizeLabel: "Default text size",
+      languageLabel: "Default language",
+      languageDescription:
+        "Language printed documents open in. You can still switch it on the print page.",
+      languageOptions: {
+        auto: "Automatic (each document's own language)",
+        ar: "العربية",
+        fr: "Français",
+        en: "English",
+      },
+      stylesTitle: "Invoice styles",
+      stylesDescription:
+        "The design used for every printed document: sales invoices, purchase invoices and daily waiter invoices.",
+      styleUse: "Use this design",
+      styleCurrent: "Current design",
+      stylePreviewHint: "Click a design to see it in full.",
+      styleNames: {
+        classic: "Classic",
+        bold: "Bold headers",
+        icons: "Icons",
+      },
       toastUpdated: "Printing settings saved",
       options: {
         "58mm": "58mm thermal",

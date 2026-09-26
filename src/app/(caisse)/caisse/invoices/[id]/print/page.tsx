@@ -43,7 +43,7 @@ export default async function CaisseInvoicePrintPage({
   ]);
   if (!data) notFound();
 
-  const lang = resolveInvoiceLang(langParam, data.invoice.language);
+  const lang = resolveInvoiceLang(langParam, data.settings.receiptLanguage ?? data.invoice.language);
   const paper = resolveReceiptPaper(paperParam, data.settings.receiptPaperSize);
   // Whichever Caisse is actually reachable — a pure Cafe install has no
   // /caisse to go back to.
@@ -56,7 +56,7 @@ export default async function CaisseInvoicePrintPage({
       otherOutstandingInvoices={data.otherOutstandingInvoices}
       lang={lang}
       paper={paper}
-      textSize={resolveReceiptTextSize(text)}
+      textSize={resolveReceiptTextSize(text, data.settings.receiptTextSize)}
       auto={auto}
       autoPrint={autoprint === "1"}
       backHref={homeHref}

@@ -6,15 +6,25 @@ import { AppearanceForm } from "@/features/settings/components/appearance-form";
 import { CompanyLogoForm } from "@/features/settings/components/company-logo-form";
 import { ReceiptPaperForm } from "@/features/settings/components/receipt-paper-form";
 import { PrintMethodForm } from "@/features/settings/components/print-method-form";
+import { PrintDefaultsForm } from "@/features/settings/components/print-defaults-form";
+import { ReceiptStyleForm } from "@/features/settings/components/receipt-style-form";
+import { buildStylePreviews } from "@/features/settings/components/style-previews";
+import { resolveInvoiceLang } from "@/features/invoices/print-labels";
 import { requirePageAccess } from "@/lib/permissions";
-import { getDictionary } from "@/i18n/server";
+import { getDictionary, getLocale } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AppearancePage() {
   await requirePageAccess("SETTINGS_MANAGE");
 
-  const [t, settings] = await Promise.all([getDictionary(), getSystemSettings()]);
+  const [t, settings, locale] = await Promise.all([
+    getDictionary(),
+    getSystemSettings(),
+    getLocale(),
+  ]);
+  // Style previews in the language documents print in by default.
+  const previewLang = resolveInvoiceLang(undefined, settings.receiptLanguage ?? locale);
 
   return (
     <div className="space-y-6">
@@ -33,7 +43,26 @@ export default async function AppearancePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <ReceiptPaperForm paper={settings.receiptPaperSize} />
+          <PrintDefaultsForm
+            textSize={settings.receiptTextSize}
+            language={settings.receiptLanguage ?? "auto"}
+          />
           <PrintMethodForm method={settings.printMethod} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t.settings.printing.stylesTitle}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ReceiptStyleForm
+            style={settings.receiptStyle}
+            previews={buildStylePreviews({
+              lang: previewLang,
+              logoUrl: settings.logoUrl,
+              appName: settings.appName,
+            })}
+          />
         </CardContent>
       </Card>
       <Card>

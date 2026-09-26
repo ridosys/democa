@@ -151,6 +151,12 @@ model SystemSettings {
   receiptPaperSize   String           @default("58mm")
   /// "browser" | "thermer" | "escpos" — see src/lib/print-method.ts
   printMethod        String           @default("browser")
+  /// Default text size of printed documents, in % (see src/lib/receipt-paper.ts)
+  receiptTextSize    Int              @default(100)
+  /// "ar" | "fr" | "en", or null for each document's own language
+  receiptLanguage    String?
+  /// Look of every printed document: "classic" | "bold" | "icons" — see src/lib/receipt-style.ts
+  receiptStyle       String           @default("classic")
   businessTypeId     String?
   activeBusinessType BusinessTypeDef? @relation(fields: [businessTypeId], references: [id], onDelete: SetNull)
   updatedAt          DateTime         @updatedAt
