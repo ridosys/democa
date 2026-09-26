@@ -343,7 +343,7 @@ export const fr = {
       "Thermer ne s'est pas ouvert. Vérifiez que l'application Thermer est installée sur cet appareil Android",
   },
   escposPrint: {
-    button: "Imprimer",
+    button: "Imprimer ESC/POS (Android)",
     buildError: "Impossible de préparer le ticket pour l'impression, veuillez réessayer",
     disabledError: "Open ESC/POS Print Service n'est pas le mode d'impression choisi dans les paramètres",
     notFoundError: "Facture introuvable",
@@ -1702,12 +1702,18 @@ export const fr = {
       description:
         "Format de papier par défaut des factures et des factures journalières des serveurs. Vous pouvez toujours le changer sur la page d'impression.",
       paperLabel: "Format du papier",
+      textSizeLabel: "Taille du texte",
+      textSizeNormal: "normale",
       toastUpdated: "Paramètres d'impression enregistrés",
       options: {
         "58mm": "Thermique 58mm",
+        "76mm": "Thermique 76mm",
         "80mm": "Thermique 80mm",
+        "112mm": "Thermique 112mm",
+        A6: "A6",
         A5: "A5",
         A4: "A4",
+        Letter: "Letter (US)",
       },
     },
     brandingTitle: "Entreprise / Identité visuelle",

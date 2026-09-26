@@ -310,7 +310,7 @@ export function InvoicePrintTotals({
       <ReceiptRule />
       <ReceiptLine
         className="text-[1.5em] leading-tight font-bold"
-        label={<span className="whitespace-nowrap">{labels.grandTotal}</span>}
+        label={labels.grandTotal}
         value={formatCurrency(grandTotal, lang, false)}
       />
       <ReceiptRule />

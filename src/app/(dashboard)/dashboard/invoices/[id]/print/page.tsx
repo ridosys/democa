@@ -5,7 +5,7 @@ import {
 } from "@/features/invoices/components/invoice-print-view";
 import { loadInvoicePrintData } from "@/features/invoices/print-data";
 import { requirePageAccess } from "@/lib/permissions";
-import { resolveReceiptPaper } from "@/lib/receipt-paper";
+import { resolveReceiptPaper, resolveReceiptTextSize } from "@/lib/receipt-paper";
 
 export const dynamic = "force-dynamic";
 
@@ -14,12 +14,12 @@ export default async function InvoicePrintPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ lang?: string; auto?: string; paper?: string }>;
+  searchParams: Promise<{ lang?: string; auto?: string; paper?: string; text?: string }>;
 }) {
   await requirePageAccess("INVOICES_VIEW");
 
   const { id } = await params;
-  const { lang: langParam, auto, paper: paperParam } = await searchParams;
+  const { lang: langParam, auto, paper: paperParam, text } = await searchParams;
 
   const data = await loadInvoicePrintData(id);
   if (!data) notFound();
@@ -34,6 +34,7 @@ export default async function InvoicePrintPage({
       otherOutstandingInvoices={data.otherOutstandingInvoices}
       lang={lang}
       paper={paper}
+      textSize={resolveReceiptTextSize(text)}
       auto={auto}
       backHref={`/dashboard/invoices/${data.invoice.id}`}
     />

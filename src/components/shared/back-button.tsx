@@ -6,6 +6,19 @@ import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 
+/** Returns a function that goes to the previous page (browser history), or
+ * to `fallbackHref` when there is none (page opened directly / new tab). */
+export function useGoBack(fallbackHref: string) {
+  const router = useRouter();
+  return () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push(fallbackHref);
+    }
+  };
+}
+
 /** Goes to the actual previous page (browser history) instead of a fixed
  * route, so it lands wherever the admin actually came from — a filtered
  * list page, a different tab, etc. Falls back to `fallbackHref` only when
@@ -20,15 +33,7 @@ export function BackButton({
   className?: string;
 }) {
   const t = useT();
-  const router = useRouter();
-
-  function handleClick() {
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push(fallbackHref);
-    }
-  }
+  const handleClick = useGoBack(fallbackHref);
 
   return (
     <Button

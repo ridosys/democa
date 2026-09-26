@@ -2,7 +2,12 @@ import "server-only";
 import path from "node:path";
 import { createCanvas, GlobalFonts, type SKRSContext2D } from "@napi-rs/canvas";
 import type { ReceiptLine } from "@/features/invoices/bluetooth-receipt";
-import type { ReceiptPaperSize } from "@/lib/receipt-paper";
+import {
+  DEFAULT_RECEIPT_TEXT_SIZE,
+  receiptPrinterDots,
+  type ReceiptPaperSize,
+  type ReceiptTextSize,
+} from "@/lib/receipt-paper";
 
 /**
  * Renders a receipt to a black-on-white PNG as wide as the thermal printer's
@@ -26,10 +31,6 @@ function registerFonts() {
   fontsRegistered = true;
 }
 
-/** Printable dots per line at 203 dpi: 48mm on 58mm paper, 72mm on 80mm. */
-export function receiptImageWidth(paper: ReceiptPaperSize): number {
-  return paper === "58mm" ? 384 : 576;
-}
 
 type Dir = "rtl" | "ltr";
 type Align = "start" | "end" | "center";
@@ -78,8 +79,9 @@ function layout(
   lines: ReceiptLine[],
   width: number,
   dir: Dir,
+  textSize: ReceiptTextSize,
 ): { ops: Op[]; height: number } {
-  const base = width >= 576 ? 26 : 25;
+  const base = Math.round(((width > 384 ? 26 : 25) * textSize) / 100);
   const inner = width - PADDING * 2;
   const ops: Op[] = [];
   let y = PADDING;
@@ -92,11 +94,18 @@ function layout(
     ctx.font = font(size, bold);
     for (const part of wrap(ctx, text, inner)) pushText(part, size, bold, align, textDir);
   };
-  /** Label on the start side, value on the end side of the same line. */
+  /** Label on the start side, value on the end side of the same line —
+   * or the value on a line of its own when both don't fit (large text). */
   const row = (label: string, value: string, size: number, bold: boolean) => {
     ctx.font = font(size, bold);
     const valueWidth = ctx.measureText(value).width;
-    const labelParts = wrap(ctx, label, Math.max(inner / 3, inner - valueWidth - GAP));
+    const room = inner - valueWidth - GAP;
+    if (ctx.measureText(label).width > room && room < inner / 2) {
+      for (const part of wrap(ctx, label, inner)) pushText(part, size, bold, "start", dir);
+      pushText(value, size, bold, "end", dir);
+      return;
+    }
+    const labelParts = wrap(ctx, label, Math.max(inner / 3, room));
     ops.push({ kind: "text", text: value, y, size, bold, align: "end", dir });
     for (const part of labelParts) pushText(part, size, bold, "start", dir);
   };
@@ -141,12 +150,17 @@ function layout(
 
 export function renderReceiptImage(
   lines: ReceiptLine[],
-  { paper, dir }: { paper: ReceiptPaperSize; dir: Dir },
+  {
+    paper,
+    dir,
+    textSize = DEFAULT_RECEIPT_TEXT_SIZE,
+  }: { paper: ReceiptPaperSize; dir: Dir; textSize?: ReceiptTextSize },
 ): Buffer {
   registerFonts();
-  const width = receiptImageWidth(paper);
+  // Printable dots per line at 203 dpi (48mm on 58mm paper, 72mm on 80mm…).
+  const width = receiptPrinterDots(paper);
   const measure = createCanvas(width, 10).getContext("2d");
-  const { ops, height } = layout(measure, lines, width, dir);
+  const { ops, height } = layout(measure, lines, width, dir, textSize);
 
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext("2d");

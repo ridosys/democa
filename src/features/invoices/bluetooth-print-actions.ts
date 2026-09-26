@@ -12,13 +12,29 @@ import {
   receiptLogoDataUri,
 } from "@/features/invoices/escpos-receipt";
 import { getDictionary } from "@/i18n/server";
+import type { ReceiptPrintOptions } from "@/lib/print-method";
 
 const INVOICE_ID = /^[a-z0-9]{10,40}$/i;
 
 const ESCPOS_PACKAGE = "com.farminos.print";
 
+/**
+ * JSON with every non-ASCII character written as a \uXXXX escape. The app
+ * decodes the unzipped bytes 32 at a time, each chunk on its own, so a
+ * multi-byte UTF-8 character (every Arabic letter) that straddles two
+ * chunks turns into "?". Pure ASCII has no multi-byte characters to split,
+ * and the app's JSON parser turns the escapes back into the exact text.
+ */
+function asciiJson(value: unknown): string {
+  return JSON.stringify(value).replace(
+    /[\u0080-\uffff]/g,
+    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
+}
+
 export async function createBluetoothPrintLink(
   invoiceId: unknown,
+  options: ReceiptPrintOptions = {},
 ): Promise<{ path: string } | { error: string }> {
   const t = await getDictionary();
   if (!(await hasAnyPermission(["POS_VIEW", "INVOICES_VIEW"]))) {
@@ -39,10 +55,13 @@ export async function createBluetoothPrintLink(
     return { error: t.bluetoothPrint.disabledError };
   if (!invoice) return { error: t.bluetoothPrint.notFoundError };
 
-  const token = createInvoicePrintToken(invoice.id);
-  return {
-    path: `/api/print/invoice/${encodeURIComponent(invoice.id)}?token=${encodeURIComponent(token)}`,
-  };
+  // lang / paper are only display choices (validated by the endpoint); the
+  // token alone grants access, to this one invoice.
+  const query = new URLSearchParams({ token: createInvoicePrintToken(invoice.id) });
+  if (typeof options.lang === "string") query.set("lang", options.lang);
+  if (typeof options.paper === "string") query.set("paper", options.paper);
+  if (typeof options.textSize === "string") query.set("text", options.textSize);
+  return { path: `/api/print/invoice/${encodeURIComponent(invoice.id)}?${query}` };
 }
 
 /**
@@ -54,6 +73,7 @@ export async function createBluetoothPrintLink(
  */
 export async function createEscposPrintIntent(
   invoiceId: unknown,
+  options: ReceiptPrintOptions = {},
 ): Promise<{ url: string } | { error: string }> {
   const t = await getDictionary();
   if (!(await hasAnyPermission(["POS_VIEW", "INVOICES_VIEW"]))) {
@@ -72,16 +92,15 @@ export async function createEscposPrintIntent(
   if (!invoice) return { error: t.escposPrint.notFoundError };
   if (invoice.items.length === 0) return { error: t.escposPrint.buildError };
 
-  const { lines, dir } = buildReceiptLines(invoice, settings);
+  const { lines, dir, paper, textSize } = buildReceiptLines(invoice, settings, options);
   const html = buildEscposReceiptHtml({
     lines,
     dir,
-    paper: settings.receiptPaperSize,
+    paper,
+    textSize,
     logo: await receiptLogoDataUri(settings.logoUrl),
   });
-  const content = gzipSync(
-    Buffer.from(JSON.stringify([html]), "utf8"),
-  ).toString("base64");
+  const content = gzipSync(Buffer.from(asciiJson([html]), "utf8")).toString("base64");
 
   const extras = [
     "scheme=print-intent",

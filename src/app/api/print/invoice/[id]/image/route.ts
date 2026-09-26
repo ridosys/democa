@@ -23,8 +23,13 @@ export async function GET(
       return NextResponse.json({ error: result.error }, { status: result.status, headers: HEADERS });
     }
 
-    const { lines, dir } = buildReceiptLines(result.invoice, result.settings);
-    const png = renderReceiptImage(lines, { paper: result.settings.receiptPaperSize, dir });
+    const { searchParams } = request.nextUrl;
+    const { lines, dir, paper, textSize } = buildReceiptLines(result.invoice, result.settings, {
+      lang: searchParams.get("lang") ?? undefined,
+      paper: searchParams.get("paper") ?? undefined,
+      textSize: searchParams.get("text") ?? undefined,
+    });
+    const png = renderReceiptImage(lines, { paper, dir, textSize });
     return new NextResponse(new Uint8Array(png), {
       headers: { ...HEADERS, "Content-Type": "image/png" },
     });

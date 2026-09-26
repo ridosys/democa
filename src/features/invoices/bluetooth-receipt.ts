@@ -9,7 +9,15 @@ import {
 import { dictionaries } from "@/i18n/dictionaries";
 import { CURRENCY_LABEL, formatCurrency } from "@/lib/currency";
 import { formatDateTime } from "@/lib/date";
-import type { ReceiptPaperSize } from "@/lib/receipt-paper";
+import {
+  DEFAULT_RECEIPT_TEXT_SIZE,
+  isReceiptPaperSize,
+  receiptPrinterDots,
+  resolveReceiptTextSize,
+  type ReceiptPaperSize,
+  type ReceiptTextSize,
+} from "@/lib/receipt-paper";
+import type { ReceiptPrintOptions } from "@/lib/print-method";
 
 /**
  * Builds the JSON the Android "Bluetooth Print" app prints (Browser Print):
@@ -57,7 +65,7 @@ const ARABIC = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFE
 
 /** Characters per line in the printer's default font (font A, 12×24). */
 export function receiptLineWidth(paper: ReceiptPaperSize): number {
-  return paper === "58mm" ? 32 : 48;
+  return Math.floor(receiptPrinterDots(paper) / 12);
 }
 
 /** Amount without the bidi isolate marks formatCurrency adds for the web. */
@@ -245,17 +253,41 @@ function toTextEntries(lines: ReceiptLine[], width: number): TextEntry[] {
   return entries;
 }
 
+/** Language / paper / text size chosen on the print page, falling back to
+ * the invoice's own language, the default paper from settings and 100%. */
+export function resolveReceiptOptions(
+  invoice: InvoiceData,
+  settings: SystemSettingsData,
+  options: ReceiptPrintOptions = {},
+): { lang: Lang; paper: ReceiptPaperSize; textSize: ReceiptTextSize } {
+  const requested = typeof options.lang === "string" ? options.lang.toLowerCase() : undefined;
+  return {
+    lang: resolveInvoiceLang(
+      requested === "ar" || requested === "fr" || requested === "en" ? requested : undefined,
+      invoice.language,
+    ),
+    paper: isReceiptPaperSize(options.paper) ? options.paper : settings.receiptPaperSize,
+    textSize: resolveReceiptTextSize(options.textSize),
+  };
+}
+
 /** The receipt's lines, and whether they must be printed as an image
- * (anything Arabic) rather than as plain text. */
-export function buildReceiptLines(invoice: InvoiceData, settings: SystemSettingsData) {
-  const lang = resolveInvoiceLang(undefined, invoice.language);
+ * rather than as plain text: anything Arabic, or a text size other than
+ * the printer's fixed font. */
+export function buildReceiptLines(
+  invoice: InvoiceData,
+  settings: SystemSettingsData,
+  options: ReceiptPrintOptions = {},
+) {
+  const { lang, paper, textSize } = resolveReceiptOptions(invoice, settings, options);
   const lines = buildLines(invoice, settings, lang);
   const needsImage =
     lang === "ar" ||
+    textSize !== DEFAULT_RECEIPT_TEXT_SIZE ||
     lines.some((line) =>
       Object.values(line).some((value) => typeof value === "string" && ARABIC.test(value)),
     );
-  return { lines, needsImage, dir: lang === "ar" ? ("rtl" as const) : ("ltr" as const) };
+  return { lines, needsImage, paper, textSize, dir: lang === "ar" ? ("rtl" as const) : ("ltr" as const) };
 }
 
 export function buildBluetoothReceipt({
@@ -263,6 +295,7 @@ export function buildBluetoothReceipt({
   settings,
   origin,
   imageUrl,
+  options,
 }: {
   invoice: InvoiceData;
   settings: SystemSettingsData;
@@ -270,15 +303,17 @@ export function buildBluetoothReceipt({
   origin: string;
   /** Signed URL of this receipt rendered as a PNG (for Arabic receipts). */
   imageUrl: string;
+  /** Language / paper / text size picked on the print page. */
+  options?: ReceiptPrintOptions;
 }): Record<string, BluetoothPrintEntry> {
-  const { lines, needsImage } = buildReceiptLines(invoice, settings);
+  const { lines, needsImage, paper } = buildReceiptLines(invoice, settings, options);
 
   const entries: BluetoothPrintEntry[] = [];
   const logo = printableLogoUrl(settings.logoUrl, origin);
   if (logo) entries.push({ type: 1, path: logo, align: 1 });
 
   if (needsImage) entries.push({ type: 1, path: imageUrl, align: 1 });
-  else entries.push(...toTextEntries(lines, receiptLineWidth(settings.receiptPaperSize)));
+  else entries.push(...toTextEntries(lines, receiptLineWidth(paper)));
 
   // The app expects a JSON object keyed "0", "1", … (PHP JSON_FORCE_OBJECT).
   return Object.fromEntries(entries.map((entry, index) => [String(index), entry]));

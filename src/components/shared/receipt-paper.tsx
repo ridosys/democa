@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
+  DEFAULT_RECEIPT_TEXT_SIZE,
   RECEIPT_PAPER_SPECS,
   type ReceiptPaperSize,
+  type ReceiptTextSize,
 } from "@/lib/receipt-paper";
 
 const PX_PER_MM = 96 / 25.4;
@@ -27,12 +29,15 @@ const MONO_FONT =
 export function ReceiptPaper({
   id,
   paper,
+  textSize = DEFAULT_RECEIPT_TEXT_SIZE,
   dir,
   className,
   children,
 }: {
   id: string;
   paper: ReceiptPaperSize;
+  /** % of the paper's base font size. */
+  textSize?: ReceiptTextSize;
   dir: "rtl" | "ltr";
   className?: string;
   children: React.ReactNode;
@@ -76,7 +81,7 @@ export function ReceiptPaper({
         style={{
           width: `${spec.widthMm}mm`,
           padding: `${spec.paddingMm}mm`,
-          fontSize: `${spec.fontPx}px`,
+          fontSize: `${(spec.fontPx * textSize) / 100}px`,
           lineHeight: 1.35,
           fontFamily: dir === "rtl" ? undefined : MONO_FONT,
         }}

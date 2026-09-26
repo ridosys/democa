@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { BackButton } from "@/components/shared/back-button";
 import { ReceiptPaper } from "@/components/shared/receipt-paper";
 import { ReceiptPaperSwitcher } from "@/components/shared/receipt-paper-switcher";
+import { ReceiptTextSizeSwitcher } from "@/components/shared/receipt-text-size-switcher";
 import {
   ReceiptBrand,
   ReceiptRule,
@@ -16,7 +17,11 @@ import { formatCurrency } from "@/lib/currency";
 import { formatDate, parseDateInputValue, toDateInputValue } from "@/lib/date";
 import { requirePageAccess } from "@/lib/permissions";
 import { requireFeature } from "@/lib/features";
-import { isThermalPaper, resolveReceiptPaper } from "@/lib/receipt-paper";
+import {
+  isThermalPaper,
+  resolveReceiptPaper,
+  resolveReceiptTextSize,
+} from "@/lib/receipt-paper";
 import { cn } from "@/lib/utils";
 import { getDictionary, getLocale } from "@/i18n/server";
 
@@ -31,7 +36,7 @@ export default async function WaiterDailyReportPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ date?: string; paper?: string }>;
+  searchParams: Promise<{ date?: string; paper?: string; text?: string }>;
 }) {
   await requirePageAccess("ORDERS_VIEW");
   await requireFeature("WAITERS");
@@ -69,6 +74,7 @@ export default async function WaiterDailyReportPage({
   const remainingTotal = Math.max(0, grandTotal - paidTotal);
 
   const paper = resolveReceiptPaper(requested.paper, settings.receiptPaperSize);
+  const textSize = resolveReceiptTextSize(requested.text);
   // Thermal rolls can't fit five columns side by side — each order goes on
   // two lines and the stat boxes wrap 2×2.
   const narrow = isThermalPaper(paper);
@@ -88,6 +94,7 @@ export default async function WaiterDailyReportPage({
         <BackButton fallbackHref={`/dashboard/waiters/${id}`} />
         <div className="flex flex-wrap gap-2">
           <ReceiptPaperSwitcher paper={paper} />
+          <ReceiptTextSizeSwitcher size={textSize} />
           <InvoicePdfButton
             targetId="waiter-daily-report"
             fileName={`${labels.fileName}-${report.waiter.name}-${date}.pdf`}
@@ -99,7 +106,7 @@ export default async function WaiterDailyReportPage({
       </div>
 
       <div className="overflow-x-auto pb-2 print:overflow-visible print:pb-0">
-        <ReceiptPaper id="waiter-daily-report" paper={paper} dir={dir}>
+        <ReceiptPaper id="waiter-daily-report" paper={paper} textSize={textSize} dir={dir}>
           <ReceiptBrand logoUrl={settings.logoUrl} name={settings.appName} />
 
           <h1 className="mt-[0.3em] text-center text-[1.9em] leading-tight font-bold">

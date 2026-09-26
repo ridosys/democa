@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Check, ChevronDown, Printer } from "lucide-react";
+import { ALargeSmall, Check, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,21 +12,24 @@ import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 import {
-  RECEIPT_PAPER_SIZES,
-  type ReceiptPaperSize,
+  DEFAULT_RECEIPT_TEXT_SIZE,
+  RECEIPT_TEXT_SIZES,
+  type ReceiptTextSize,
 } from "@/lib/receipt-paper";
 
-/** Per-print paper override via `?paper=` — the saved default lives in
- * Settings → Appearance. Keeps the other query params (lang, date, …). */
-export function ReceiptPaperSwitcher({ paper }: { paper: ReceiptPaperSize }) {
+/** Per-print text size via `?text=` (a % of the paper's base font size).
+ * Keeps the other query params (lang, paper, …). */
+export function ReceiptTextSizeSwitcher({ size }: { size: ReceiptTextSize }) {
   const t = useT();
+  const tp = t.settings.printing;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  function select(option: ReceiptPaperSize) {
+  function select(option: ReceiptTextSize) {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("paper", option);
+    if (option === DEFAULT_RECEIPT_TEXT_SIZE) params.delete("text");
+    else params.set("text", String(option));
     params.delete("auto");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }
@@ -35,16 +38,23 @@ export function ReceiptPaperSwitcher({ paper }: { paper: ReceiptPaperSize }) {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button type="button" variant="outline" size="sm" className="gap-2">
-            <Printer className="size-4" />
-            {t.settings.printing.options[paper]}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            aria-label={tp.textSizeLabel}
+            title={tp.textSizeLabel}
+          >
+            <ALargeSmall className="size-4" />
+            <span dir="ltr" className="tabular-nums">{size}%</span>
             <ChevronDown className="size-3.5 text-muted-foreground" />
           </Button>
         }
       />
-      <DropdownMenuContent align="start" className="w-48 p-1.5">
-        {RECEIPT_PAPER_SIZES.map((option) => {
-          const isActive = option === paper;
+      <DropdownMenuContent align="start" className="max-h-80 w-48 p-1.5">
+        {RECEIPT_TEXT_SIZES.map((option) => {
+          const isActive = option === size;
           return (
             <DropdownMenuItem
               key={option}
@@ -55,7 +65,10 @@ export function ReceiptPaperSwitcher({ paper }: { paper: ReceiptPaperSize }) {
               )}
             >
               <span className="flex-1 truncate font-medium">
-                {t.settings.printing.options[option]}
+                <span dir="ltr" className="tabular-nums">{option}%</span>
+                {option === DEFAULT_RECEIPT_TEXT_SIZE && (
+                  <span className="text-muted-foreground"> ({tp.textSizeNormal})</span>
+                )}
               </span>
               {isActive && <Check className="size-4 shrink-0 text-primary!" />}
             </DropdownMenuItem>

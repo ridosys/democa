@@ -49,10 +49,17 @@ export function ReceiptLine({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-baseline justify-between gap-[1em]", className)}>
+    // Wraps (value on its own line, still at the end) when a large text
+    // size doesn't leave room for both on narrow paper.
+    <div
+      className={cn(
+        "flex flex-wrap items-baseline justify-between gap-x-[1em]",
+        className,
+      )}
+    >
       <span className="min-w-0">{label}</span>
       {value !== undefined && (
-        <span className="shrink-0 text-end whitespace-nowrap">{value}</span>
+        <span className="ms-auto shrink-0 text-end whitespace-nowrap">{value}</span>
       )}
     </div>
   );

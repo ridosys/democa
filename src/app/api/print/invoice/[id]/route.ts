@@ -25,14 +25,24 @@ export async function GET(
     const result = await loadPrintRequest(id, request.nextUrl.searchParams.get("token"));
     if (!result.ok) return json({ error: result.error }, result.status);
 
-    const { origin } = request.nextUrl;
-    const imageUrl = `${origin}/api/print/invoice/${encodeURIComponent(id)}/image?token=${encodeURIComponent(result.token)}`;
+    const { origin, searchParams } = request.nextUrl;
+    const options = {
+      lang: searchParams.get("lang") ?? undefined,
+      paper: searchParams.get("paper") ?? undefined,
+      textSize: searchParams.get("text") ?? undefined,
+    };
+    const imageQuery = new URLSearchParams({ token: result.token });
+    if (options.lang) imageQuery.set("lang", options.lang);
+    if (options.paper) imageQuery.set("paper", options.paper);
+    if (options.textSize) imageQuery.set("text", options.textSize);
+    const imageUrl = `${origin}/api/print/invoice/${encodeURIComponent(id)}/image?${imageQuery}`;
     return json(
       buildBluetoothReceipt({
         invoice: result.invoice,
         settings: result.settings,
         origin,
         imageUrl,
+        options,
       }),
     );
   } catch (error) {

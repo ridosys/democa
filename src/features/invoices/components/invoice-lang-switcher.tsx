@@ -43,7 +43,7 @@ export function InvoiceLangSwitcher({ lang }: { lang: Lang }) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("lang", option);
     params.delete("auto");
-    router.push(`${pathname}?${params.toString()}`);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
   return (

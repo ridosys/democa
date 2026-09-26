@@ -335,7 +335,7 @@ export const en = {
       "Thermer didn't open. Make sure the Thermer app is installed on this Android device",
   },
   escposPrint: {
-    button: "Print",
+    button: "Print ESC/POS (Android)",
     buildError: "Couldn't prepare the receipt for printing, please try again",
     disabledError: "Open ESC/POS Print Service isn't the printing method selected in settings",
     notFoundError: "Invoice not found",
@@ -1661,12 +1661,18 @@ export const en = {
       description:
         "Default paper size for printed invoices and daily waiter invoices. You can still switch it on the print page.",
       paperLabel: "Paper size",
+      textSizeLabel: "Text size",
+      textSizeNormal: "normal",
       toastUpdated: "Printing settings saved",
       options: {
         "58mm": "58mm thermal",
+        "76mm": "76mm thermal",
         "80mm": "80mm thermal",
+        "112mm": "112mm thermal",
+        A6: "A6",
         A5: "A5",
         A4: "A4",
+        Letter: "Letter",
       },
     },
     brandingTitle: "Company / Branding",

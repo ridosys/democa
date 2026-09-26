@@ -2,7 +2,12 @@ import "server-only";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { ReceiptLine } from "@/features/invoices/bluetooth-receipt";
-import type { ReceiptPaperSize } from "@/lib/receipt-paper";
+import {
+  DEFAULT_RECEIPT_TEXT_SIZE,
+  receiptPrinterDots,
+  type ReceiptPaperSize,
+  type ReceiptTextSize,
+} from "@/lib/receipt-paper";
 
 /**
  * Receipt HTML for the Android "Open ESC/POS Print Service" app. The app
@@ -15,8 +20,12 @@ import type { ReceiptPaperSize } from "@/lib/receipt-paper";
 
 const MAX_LOGO_BYTES = 300 * 1024;
 
-/** Base font size, as a share of the paper width. */
-const BASE_VW: Record<"58mm" | "80mm", number> = { "58mm": 6.4, "80mm": 4.6 };
+/** Base font size, as a share of the paper width: 6.4vw on a 58mm roll,
+ * and on wider rolls the same printed size as 4.6vw on an 80mm one. */
+function baseVw(paper: ReceiptPaperSize): number {
+  const dots = receiptPrinterDots(paper);
+  return dots <= 384 ? 6.4 : (4.6 * 576) / dots;
+}
 
 function escapeHtml(value: string): string {
   return value
@@ -72,14 +81,16 @@ export function buildEscposReceiptHtml({
   lines,
   dir,
   paper,
+  textSize = DEFAULT_RECEIPT_TEXT_SIZE,
   logo,
 }: {
   lines: ReceiptLine[];
   dir: "rtl" | "ltr";
   paper: ReceiptPaperSize;
+  textSize?: ReceiptTextSize;
   logo: string | null;
 }): string {
-  const base = BASE_VW[paper === "58mm" ? "58mm" : "80mm"];
+  const base = ((baseVw(paper) * textSize) / 100).toFixed(2);
   // Numbers / codes stay left-to-right inside an RTL receipt.
   const row = (left: string, right: string, cls = "", ltrLeft = false) =>
     `<table class="row ${cls}"><tr>` +

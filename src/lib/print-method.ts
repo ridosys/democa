@@ -18,6 +18,11 @@ export function isPrintMethod(value: unknown): value is PrintMethod {
   return typeof value === "string" && (PRINT_METHODS as readonly string[]).includes(value);
 }
 
+/** What the print page is showing (its language / paper / text size
+ * switchers), so a printer app prints the receipt the same way. Validated
+ * on the server. */
+export type ReceiptPrintOptions = { lang?: string; paper?: string; textSize?: string };
+
 export function resolvePrintMethod(value: unknown): PrintMethod {
   return isPrintMethod(value) ? value : DEFAULT_PRINT_METHOD;
 }

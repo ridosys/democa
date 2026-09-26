@@ -11,6 +11,7 @@ import { BrandMark } from "@/components/shared/brand-mark";
 import { Button } from "@/components/ui/button";
 import { ReceiptPaper } from "@/components/shared/receipt-paper";
 import { ReceiptPaperSwitcher } from "@/components/shared/receipt-paper-switcher";
+import { ReceiptTextSizeSwitcher } from "@/components/shared/receipt-text-size-switcher";
 import {
   ReceiptBrand,
   ReceiptRule,
@@ -21,7 +22,7 @@ import type { getSystemSettings } from "@/features/settings/queries";
 import { getDictionary } from "@/i18n/server";
 import { CURRENCY_LABEL, formatCurrency } from "@/lib/currency";
 import { formatDateTime } from "@/lib/date";
-import type { ReceiptPaperSize } from "@/lib/receipt-paper";
+import type { ReceiptPaperSize, ReceiptTextSize } from "@/lib/receipt-paper";
 import {
   INVOICE_PRINT_LABELS,
   resolveInvoiceLang,
@@ -55,6 +56,7 @@ export async function InvoicePrintView({
   homeLabel,
   otherOutstandingInvoices,
   paper,
+  textSize,
   autoPrint = false,
 }: {
   invoice: InvoiceData;
@@ -70,6 +72,7 @@ export async function InvoicePrintView({
   homeLabel?: string;
   otherOutstandingInvoices: OutstandingInvoice[];
   paper: ReceiptPaperSize;
+  textSize: ReceiptTextSize;
   /** Open the print dialog as soon as the receipt is ready (`?autoprint=1`). */
   autoPrint?: boolean;
 }) {
@@ -117,6 +120,7 @@ export async function InvoicePrintView({
         <div className="flex flex-wrap items-center justify-center gap-2">
           <InvoiceLangSwitcher lang={lang} />
           <ReceiptPaperSwitcher paper={paper} />
+          <ReceiptTextSizeSwitcher size={textSize} />
           <InvoicePdfButton
             targetId="invoice-card"
             fileName={`${invoice.invoiceNumber}.pdf`}
@@ -127,11 +131,14 @@ export async function InvoicePrintView({
           <InvoicePrintButton
             label={uiT.common.printSavePdf}
             variant={settings.printMethod === "browser" ? "default" : "outline"}
+            backHref={backHref}
           />
           <BluetoothPrintButton
             invoiceId={invoice.id}
             method={settings.printMethod}
             variant="default"
+            options={{ lang, paper, textSize: String(textSize) }}
+            backHref={backHref}
           />
         </div>
       </div>
@@ -144,7 +151,7 @@ export async function InvoicePrintView({
       />
 
       <div className="overflow-x-auto pb-2 print:overflow-visible print:pb-0">
-        <ReceiptPaper id="invoice-card" paper={paper} dir={dir}>
+        <ReceiptPaper id="invoice-card" paper={paper} textSize={textSize} dir={dir}>
           <ReceiptBrand logoUrl={settings.logoUrl} name={settings.appName} />
 
           <h1 className="mt-[0.3em] text-center text-[2.2em] leading-tight font-bold uppercase">
@@ -171,7 +178,9 @@ export async function InvoicePrintView({
 
           <table className="w-full border-collapse">
             <thead>
-              <tr className="align-top font-bold">
+              {/* Headers may break mid-word rather than push the columns
+                  past the paper edge at large text sizes. */}
+              <tr className="align-top font-bold [&>th]:[overflow-wrap:anywhere]">
                 <th className="w-[14%] pe-[0.4em] pb-[0.4em] text-start">
                   {t.quantity}
                 </th>
@@ -197,7 +206,7 @@ export async function InvoicePrintView({
                   <td className="pe-[0.4em] pb-[0.3em]">
                     {Number(item.quantity)}
                   </td>
-                  <td className="pe-[0.4em] pb-[0.3em] break-words">
+                  <td className="pe-[0.4em] pb-[0.3em] [overflow-wrap:anywhere]">
                     {item.name}
                   </td>
                   <td className="pe-[0.4em] pb-[0.3em] text-end whitespace-nowrap">

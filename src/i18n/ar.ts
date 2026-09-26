@@ -327,7 +327,7 @@ export const ar = {
       "لم يُفتح تطبيق Thermer. تأكد من تثبيت تطبيق Thermer على جهاز الأندرويد هذا",
   },
   escposPrint: {
-    button: "طباعة",
+    button: "طباعة ESC/POS (أندرويد)",
     buildError: "تعذّر تجهيز الفاتورة للطباعة، يرجى المحاولة مرة أخرى",
     disabledError: "Open ESC/POS Print Service ليس طريقة الطباعة المختارة في الإعدادات",
     notFoundError: "الفاتورة غير موجودة",
@@ -1622,12 +1622,18 @@ export const ar = {
       description:
         "حجم الورق الافتراضي للفواتير المطبوعة والفواتير اليومية للنادل. يمكنك تغييره أيضاً من صفحة الطباعة.",
       paperLabel: "حجم الورق",
+      textSizeLabel: "حجم الخط",
+      textSizeNormal: "عادي",
       toastUpdated: "تم حفظ إعدادات الطباعة",
       options: {
         "58mm": "حراري 58mm",
+        "76mm": "حراري 76mm",
         "80mm": "حراري 80mm",
+        "112mm": "حراري 112mm",
+        A6: "A6",
         A5: "A5",
         A4: "A4",
+        Letter: "Letter (أمريكي)",
       },
     },
     brandingTitle: "الشركة / الهوية البصرية",

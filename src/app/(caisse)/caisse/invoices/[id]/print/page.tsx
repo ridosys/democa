@@ -5,7 +5,7 @@ import {
 } from "@/features/invoices/components/invoice-print-view";
 import { loadInvoicePrintData } from "@/features/invoices/print-data";
 import { requirePageAccess } from "@/lib/permissions";
-import { resolveReceiptPaper } from "@/lib/receipt-paper";
+import { resolveReceiptPaper, resolveReceiptTextSize } from "@/lib/receipt-paper";
 import { hasFeature } from "@/lib/features";
 import { getDictionary } from "@/i18n/server";
 
@@ -20,6 +20,7 @@ export default async function CaisseInvoicePrintPage({
     lang?: string;
     auto?: string;
     paper?: string;
+    text?: string;
     autoprint?: string;
   }>;
 }) {
@@ -30,6 +31,7 @@ export default async function CaisseInvoicePrintPage({
     lang: langParam,
     auto,
     paper: paperParam,
+    text,
     autoprint,
   } = await searchParams;
 
@@ -54,6 +56,7 @@ export default async function CaisseInvoicePrintPage({
       otherOutstandingInvoices={data.otherOutstandingInvoices}
       lang={lang}
       paper={paper}
+      textSize={resolveReceiptTextSize(text)}
       auto={auto}
       autoPrint={autoprint === "1"}
       backHref={homeHref}
